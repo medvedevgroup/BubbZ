@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(SibeliaZ)
+project(BubbZ)
 set(CMAKE_BUILD_TYPE RELEASE)
 option(spoa_build_executable "Build spoa standalone tool" ON)
 set(spoa_build_executable ON)

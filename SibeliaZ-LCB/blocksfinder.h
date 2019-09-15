@@ -186,18 +186,84 @@ namespace Sibelia
 			using namespace std::placeholders;
 			tbb::task_scheduler_init init(static_cast<int>(threads));
 
+			std::vector<int64_t> shuffle;
+			for (int64_t v = -storage_.GetVerticesNumber() + 1; v < storage_.GetVerticesNumber(); v++)
+			{
+				for (JunctionStorage::JunctionIterator it(v); it.Valid(); ++it)
+				{
+					if (it.IsPositiveStrand())
+					{
+						shuffle.push_back(v);
+						break;
+					}
+				}
+			}
+
 			time_t mark = time(0);
 			count_ = 0;
 			
-			time_t start = clock();
 			starter_ = 0;
 			progressCount_ = 0;
-			tbb::parallel_for(tbb::blocked_range<size_t>(0, storage_.GetChrNumber()), ChrSweep(*this));
-			std::sort(template_.begin(), template_.end());
-			RunTemplate runner(*this);
-			auto rng = tbb::blocked_range<size_t>(0, template_.size());
-			runner(rng);
-			std::cout << double(clock() - start) / CLOCKS_PER_SEC << std::endl;
+
+			event_.resize(storage_.GetChrNumber());
+
+			time_t start = clock();
+			starter_ = 0;
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, shuffle.size()), CheckIfSource(*this, shuffle));
+			std::cout << "Time: " << time(0) - mark << std::endl;
+			std::cout << source_.size() << std::endl;
+			CheckSmart();
+		}
+
+		void CheckSmart()
+		{
+			for (size_t chr = 0; chr < event_.size(); chr++)
+			{
+				std::list<Event> source;
+				std::sort(event_[chr].begin(), event_[chr].end());
+				for (auto & e : event_[chr])
+				{
+					if (e.isSource)
+					{
+						source.push_front(e);
+					}
+					else
+					{
+						for (auto kt = source.begin(); kt != source.end(); ++kt)
+						{
+							auto & prev = kt->fork.branch[1];
+							auto & next = e.fork.branch[1];
+							if (prev.GetChrId() == next.GetChrId() && prev.GetPosition() < next.GetPosition())
+							{
+								int64_t currentBlock = ++blocksFound_;
+								for (size_t l = 0; l < 2; l++)
+								{
+									auto it = kt->fork.branch[l];
+									auto jt = e.fork.branch[l];
+									if (jt.IsPositiveStrand())
+									{
+										auto start = it.GetPosition();
+										auto end = jt.GetPosition() + k_;
+										if (start > end)
+										{
+											std::cout << l << ' ' << start << ' ' << end << std::endl;
+										}
+
+										blocksInstance_.push_back(BlockInstance(+currentBlock, jt.GetChrId(), it.GetPosition(), jt.GetPosition() + k_));
+									}
+									else
+									{
+										//blocksInstance_.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - finder.k_, it.GetPosition()));
+									}
+								}
+
+								source.erase(kt);
+								break;
+							}
+						}
+					}
+				}
+			}
 		}
 
 		struct ChrSweep
@@ -422,6 +488,310 @@ namespace Sibelia
 			}
 		}
 
+		struct BranchData
+		{
+			std::vector<size_t> branchId;
+		};
+
+		typedef std::vector<std::vector<size_t> > BubbledBranches;
+
+		struct Fork
+		{
+			Fork(JunctionStorage::JunctionSequentialIterator it, JunctionStorage::JunctionSequentialIterator jt)
+			{
+				if (it < jt)
+				{
+					branch[0] = it;
+					branch[1] = jt;
+				}
+				else
+				{
+					branch[0] = jt;
+					branch[1] = it;
+				}
+			}
+
+			bool operator == (const Fork & f) const
+			{
+				return branch[0] == f.branch[0] && branch[1] == f.branch[1];
+			}
+
+			bool operator != (const Fork & f) const
+			{
+				return !(*this == f);
+			}
+
+			std::string ToString() const
+			{
+				std::stringstream ss;
+				for (size_t l = 0; l < 2; l++)
+				{
+					ss << (branch[l].IsPositiveStrand() ? '+' : '-') << ' ' << branch[l].GetChrId() << ' ' << branch[l].GetPosition() << ' ' << branch[l].GetChar() << ' ' << branch[l].GetVertexId() << "; ";
+				}
+
+				return ss.str();
+			}
+
+			bool operator < (const Fork & f) const
+			{
+				//return branch[0] < f.branch[0];
+				return std::make_pair(branch[0], branch[1]) < std::make_pair(f.branch[0], f.branch[1]);
+			}
+
+			JunctionStorage::JunctionSequentialIterator branch[2];
+		};
+
+		struct Event
+		{
+			bool isSource;
+			Fork fork;
+
+			Event(bool isSource, Fork fork) : isSource(isSource), fork(fork)
+			{
+
+			}
+
+			bool operator < (const Event & e) const
+			{
+				return fork.branch[0] < e.fork.branch[0];
+			}
+		};
+
+		int64_t ChainLength(const Fork & now, const Fork & next) const
+		{
+			return min(abs(now.branch[0].GetPosition() - next.branch[0].GetPosition()), abs(now.branch[1].GetPosition() - next.branch[1].GetPosition()));
+		}
+
+		void BubbledBranchesForward(int64_t vertexId, const std::vector<JunctionStorage::JunctionSequentialIterator> & instance, BubbledBranches & bulges) const
+		{
+			std::vector<size_t> parallelEdge[5];
+			std::map<int64_t, BranchData> visit;
+			bulges.assign(instance.size(), std::vector<size_t>());
+			for (size_t i = 0; i < instance.size(); i++)
+			{
+				auto vertex = instance[i];
+				if ((vertex + 1).Valid())
+				{
+					parallelEdge[TwoPaCo::DnaChar::MakeUpChar(vertex.GetChar())].push_back(i);
+				}
+
+				for (int64_t startPosition = vertex++.GetPosition(); vertex.Valid() && abs(startPosition - vertex.GetPosition()) <= maxBranchSize_; ++vertex)
+				{
+					int64_t nowVertexId = vertex.GetVertexId();
+					auto point = visit.find(nowVertexId);
+					if (point == visit.end())
+					{
+						BranchData bData;
+						bData.branchId.push_back(i);
+						visit[nowVertexId] = bData;
+					}
+					else
+					{
+						point->second.branchId.push_back(i);
+					}
+				}
+			}
+
+			for (size_t i = 0; i < 5; i++)
+			{
+				for (size_t j = 0; j < parallelEdge[i].size(); j++)
+				{
+					for (size_t k = j + 1; k < parallelEdge[i].size(); k++)
+					{
+						size_t smallBranch = parallelEdge[i][j];
+						size_t largeBranch = parallelEdge[i][k];
+						bulges[smallBranch].push_back(largeBranch);
+					}
+				}
+			}
+
+			for (auto point = visit.begin(); point != visit.end(); ++point)
+			{
+				std::sort(point->second.branchId.begin(), point->second.branchId.end());
+				for (size_t j = 0; j < point->second.branchId.size(); j++)
+				{
+					for (size_t k = j + 1; k < point->second.branchId.size(); k++)
+					{
+						size_t smallBranch = point->second.branchId[j];
+						size_t largeBranch = point->second.branchId[k];
+						if (smallBranch != largeBranch && std::find(bulges[smallBranch].begin(), bulges[smallBranch].end(), largeBranch) == bulges[smallBranch].end())
+						{
+							bulges[smallBranch].push_back(largeBranch);
+						}
+					}
+				}
+			}
+		}
+
+		void BubbledBranchesBackward(int64_t vertexId, const std::vector<JunctionStorage::JunctionSequentialIterator> & instance, BubbledBranches & bulges) const
+		{
+			std::vector<size_t> parallelEdge[5];
+			std::map<int64_t, BranchData> visit;
+			bulges.assign(instance.size(), std::vector<size_t>());
+			for (size_t i = 0; i < instance.size(); i++)
+			{
+				auto iPrev = instance[i] - 1;
+				if (iPrev.Valid())
+				{
+					for (size_t j = i + 1; j < instance.size(); j++)
+					{
+						auto jPrev = instance[j] - 1;
+						if (jPrev.Valid() && iPrev.GetVertexId() == jPrev.GetVertexId() && iPrev.GetChar() == jPrev.GetChar())
+						{
+							bulges[i].push_back(j);
+						}
+					}
+				}
+			}
+
+
+			for (size_t i = 0; i < instance.size(); i++)
+			{
+				auto vertex = instance[i];
+				auto prev = vertex - 1;
+
+				for (int64_t startPosition = vertex--.GetPosition(); vertex.Valid() && abs(startPosition - vertex.GetPosition()) <= maxBranchSize_; --vertex)
+				{
+					int64_t nowVertexId = vertex.GetVertexId();
+					auto point = visit.find(nowVertexId);
+					if (point == visit.end())
+					{
+						BranchData bData;
+						bData.branchId.push_back(i);
+						visit[nowVertexId] = bData;
+					}
+					else
+					{
+						point->second.branchId.push_back(i);
+					}
+				}
+			}
+
+			for (auto point = visit.begin(); point != visit.end(); ++point)
+			{
+				std::sort(point->second.branchId.begin(), point->second.branchId.end());
+				for (size_t j = 0; j < point->second.branchId.size(); j++)
+				{
+					for (size_t k = j + 1; k < point->second.branchId.size(); k++)
+					{
+						size_t smallBranch = point->second.branchId[j];
+						size_t largeBranch = point->second.branchId[k];
+						if (smallBranch != largeBranch && std::find(bulges[smallBranch].begin(), bulges[smallBranch].end(), largeBranch) == bulges[smallBranch].end())
+						{
+							bulges[smallBranch].push_back(largeBranch);
+						}
+					}
+				}
+			}
+		}
+
+		template<class T> T Min(const T & a, const T & b)
+		{
+			if (a < b)
+			{
+				return a;
+			}
+
+			return b;
+		}
+
+		struct CheckIfSource
+		{
+		public:
+			BlocksFinder & finder;
+			std::vector<int64_t> & shuffle;
+
+			CheckIfSource(BlocksFinder & finder, std::vector<int64_t> & shuffle) : finder(finder), shuffle(shuffle)
+			{
+			}
+
+			void operator()(tbb::blocked_range<size_t> & range) const
+			{
+				BubbledBranches forwardBubble;
+				BubbledBranches backwardBubble;
+				std::vector<JunctionStorage::JunctionSequentialIterator> instance;
+				for (size_t r = range.begin(); r != range.end(); r++)
+				{
+					if (finder.count_++ % 10000 == 0)
+					{
+						tbb::mutex::scoped_lock lock(finder.globalMutex_);
+						std::cout << finder.count_ << std::endl;
+					}
+
+					instance.clear();
+					int64_t vertex = shuffle[r];
+					for (auto it = JunctionStorage::JunctionIterator(vertex); it.Valid(); ++it)
+					{
+						instance.push_back(it.SequentialIterator());
+					}
+
+					finder.BubbledBranchesForward(vertex, instance, forwardBubble);
+					finder.BubbledBranchesBackward(vertex, instance, backwardBubble);
+					for (size_t i = 0; i < forwardBubble.size(); i++)
+					{
+						for (size_t j = 0; j < forwardBubble[i].size(); j++)
+						{
+							size_t k = forwardBubble[i][j];
+							if (!instance[i].IsPositiveStrand() && !instance[k].IsPositiveStrand())
+							{
+								continue;
+							}
+
+							auto it = std::find(backwardBubble[i].begin(), backwardBubble[i].end(), k);
+							if (it == backwardBubble[i].end() && (instance[i].IsPositiveStrand() && instance[k].IsPositiveStrand()))
+							{
+								tbb::mutex::scoped_lock lock(finder.globalMutex_);
+								int64_t minChrId = finder.Min(instance[i].GetChrId(), instance[k].GetChrId());
+								//finder.source_[minChrId].push_back(Fork(instance[i], instance[k]));
+								finder.event_[minChrId].push_back(Event(true, Fork(instance[i], instance[k])));
+							}
+						}
+					}
+				
+					for (size_t i = 0; i < backwardBubble.size(); i++)
+					{
+						for (size_t j = 0; j < backwardBubble[i].size(); j++)
+						{
+							size_t k = backwardBubble[i][j];
+							if (std::find(forwardBubble[i].begin(), forwardBubble[i].end(), k) == forwardBubble[i].end() && (instance[i].IsPositiveStrand() && instance[k].IsPositiveStrand()))
+							{
+								tbb::mutex::scoped_lock lock(finder.globalMutex_);
+								int64_t minChrId = finder.Min(instance[i].GetChrId(), instance[k].GetChrId());
+								//finder.sink_[minChrId].push_back(Fork(instance[i], instance[k]));
+								finder.event_[minChrId].push_back(Event(false, Fork(instance[i], instance[k])));
+							}
+						}
+					}
+				}
+			}
+		};
+
+
+		template<class T>
+		static void AddIfNotExists(std::vector<T> & adj, T value)
+		{
+			if (std::find(adj.begin(), adj.end(), value) == adj.end())
+			{
+				adj.push_back(value);
+			}
+		}
+
+		struct NextVertex
+		{
+			int64_t diff;
+			int64_t count;
+			JunctionStorage::JunctionSequentialIterator origin;
+			NextVertex() : count(0)
+			{
+
+			}
+
+			NextVertex(int64_t diff, JunctionStorage::JunctionSequentialIterator origin) : origin(origin), diff(diff), count(1)
+			{
+
+			}
+		};
+
 
 	private:
 
@@ -444,6 +814,13 @@ namespace Sibelia
 		void ListBlocksIndices(const BlockList & block, const std::string & fileName) const;
 		void ListBlocksIndicesGFF(const BlockList & blockList, const std::string & fileName) const;
 		void TryOpenFile(const std::string & fileName, std::ofstream & stream) const;
+
+
+		std::vector<std::vector<Fork> > sink_;
+		std::vector<std::vector<Fork> > source_;
+		std::vector<std::vector<Event> > event_;
+		std::vector<size_t> origin_;
+		std::vector<std::pair<Fork, Fork> > matchSource_;
 
 
 		int64_t k_;
