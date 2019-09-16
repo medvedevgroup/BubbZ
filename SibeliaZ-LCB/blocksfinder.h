@@ -257,8 +257,8 @@ namespace Sibelia
 							int64_t currentBlock = ++blocksFound_;
 							for (size_t l = 0; l < 2; l++)
 							{
-								auto it = event_[chr][i].fork.branch[l];
-								auto jt = event_[chr][bestJ].fork.branch[l];
+								auto it = event_[chr][bestJ].fork.branch[l];
+								auto jt = event_[chr][i].fork.branch[l];
 								if (jt.IsPositiveStrand())
 								{
 									auto start = it.GetPosition();
