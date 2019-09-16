@@ -222,15 +222,22 @@ namespace Sibelia
 				std::sort(event_[chr].begin(), event_[chr].end());
 				for (int64_t i = 1; i < event_[chr].size(); i++)
 				{
+					if (!event_[chr][i].fork.branch[0].IsPositiveStrand())
+					{
+						std::cerr << i;
+					}
+
 					if (!event_[chr][i].isSource)
 					{
 						int64_t bestJ = i;
 						int64_t minDiff = INT_MAX;
+						int64_t minLength = INT_MAX;
 						auto & it = event_[chr][i].fork.branch[1];
 						for (int64_t j = i - 1; j >= 0; j--)
 						{
 							auto & jt = event_[chr][j].fork.branch[1];
-							if (it.GetChrId() == jt.GetChrId() && jt.GetPosition() < it.GetPosition())
+							if (it.GetChrId() == jt.GetChrId() && it.IsPositiveStrand() == jt.IsPositiveStrand() &&
+								((it.IsPositiveStrand() && jt.GetPosition() < it.GetPosition()) || (!it.IsPositiveStrand() && jt.GetPosition() > it.GetPosition())))
 							{
 								if (!event_[chr][j].isSource)
 								{
@@ -240,19 +247,20 @@ namespace Sibelia
 								int64_t length[2];
 								for (size_t l = 0; l < 2; l++)
 								{
-									length[l] = event_[chr][i].fork.branch[l].GetPosition() - event_[chr][j].fork.branch[l].GetPosition();
+									length[l] = abs(event_[chr][i].fork.branch[l].GetPosition() - event_[chr][j].fork.branch[l].GetPosition());
 								}
 
 								auto diff = abs(length[0] - length[1]);
 								if (diff < minDiff && diff < 1000)
 								{
+									minLength = Min(length[0], length[1]);
 									minDiff = diff;
 									bestJ = j;
 								}
 							}
 						}
 
-						if (bestJ < i)
+						if (bestJ < i && minLength > minBlockSize_)
 						{
 							std::vector<int64_t> length;
 							int64_t currentBlock = ++blocksFound_;
@@ -269,7 +277,11 @@ namespace Sibelia
 								}
 								else
 								{
-									//blocksInstance_.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - finder.k_, it.GetPosition()));
+									auto start = jt.GetPosition();
+									auto end = it.GetPosition() - k_;
+								//	if (start > end)
+								//		std::cerr << l << ' ' << start << ' ' << end << std::endl;
+									blocksInstance_.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - k_, it.GetPosition()));
 								}
 							}
 
@@ -727,7 +739,7 @@ namespace Sibelia
 							}
 
 							auto it = std::find(backwardBubble[i].begin(), backwardBubble[i].end(), k);
-							if (it == backwardBubble[i].end() && (instance[i].IsPositiveStrand() && instance[k].IsPositiveStrand()))
+							if (it == backwardBubble[i].end() && (instance[i].IsPositiveStrand()))
 							{
 								tbb::mutex::scoped_lock lock(finder.globalMutex_);
 								int64_t minChrId = finder.Min(instance[i].GetChrId(), instance[k].GetChrId());
@@ -742,7 +754,7 @@ namespace Sibelia
 						for (size_t j = 0; j < backwardBubble[i].size(); j++)
 						{
 							size_t k = backwardBubble[i][j];
-							if (std::find(forwardBubble[i].begin(), forwardBubble[i].end(), k) == forwardBubble[i].end() && (instance[i].IsPositiveStrand() && instance[k].IsPositiveStrand()))
+							if (std::find(forwardBubble[i].begin(), forwardBubble[i].end(), k) == forwardBubble[i].end() && (instance[i].IsPositiveStrand()))
 							{
 								tbb::mutex::scoped_lock lock(finder.globalMutex_);
 								int64_t minChrId = finder.Min(instance[i].GetChrId(), instance[k].GetChrId());

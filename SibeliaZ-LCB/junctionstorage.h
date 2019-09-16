@@ -352,7 +352,7 @@ namespace Sibelia
 			{
 				if (IsPositiveStrand() != arg.IsPositiveStrand())
 				{
-					return IsPositiveStrand() < arg.IsPositiveStrand();
+					return IsPositiveStrand();
 				}
 
 				if (GetChrId() != arg.GetChrId())
