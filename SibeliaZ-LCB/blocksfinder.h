@@ -230,7 +230,7 @@ namespace Sibelia
 						for (int64_t j = i - 1; j >= 0; j--)
 						{
 							auto & jt = event_[chr][j].fork.branch[1];
-							if (it.GetChrId() == jt.GetChrId())
+							if (it.GetChrId() == jt.GetChrId() && jt.GetPosition() < it.GetPosition())
 							{
 								if (!event_[chr][j].isSource)
 								{
