@@ -206,7 +206,7 @@ namespace Sibelia
 			progressCount_ = 0;
 
 			event_.resize(storage_.GetChrNumber());
-
+			std::cout << storage_.GetChrVerticesCount(0) << std::endl;
 			time_t start = clock();
 			starter_ = 0;
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, shuffle.size()), CheckIfSource(*this, shuffle));
@@ -219,46 +219,57 @@ namespace Sibelia
 		{
 			for (size_t chr = 0; chr < event_.size(); chr++)
 			{
-				std::list<Event> source;
 				std::sort(event_[chr].begin(), event_[chr].end());
-				for (auto & e : event_[chr])
+				for (int64_t i = 1; i < event_[chr].size(); i++)
 				{
-					if (e.isSource)
+					if (!event_[chr][i].isSource)
 					{
-						source.push_front(e);
-					}
-					else
-					{
-						for (auto kt = source.begin(); kt != source.end(); ++kt)
+						int64_t bestJ = i;
+						int64_t minDiff = INT_MAX;
+						auto & it = event_[chr][i].fork.branch[1];
+						for (int64_t j = i - 1; j >= 0; j--)
 						{
-							auto & prev = kt->fork.branch[1];
-							auto & next = e.fork.branch[1];
-							if (prev.GetChrId() == next.GetChrId() && prev.GetPosition() < next.GetPosition())
+							auto & jt = event_[chr][j].fork.branch[1];
+							if (it.GetChrId() == jt.GetChrId())
 							{
-								int64_t currentBlock = ++blocksFound_;
-								for (size_t l = 0; l < 2; l++)
+								if (!event_[chr][j].isSource)
 								{
-									auto it = kt->fork.branch[l];
-									auto jt = e.fork.branch[l];
-									if (jt.IsPositiveStrand())
-									{
-										auto start = it.GetPosition();
-										auto end = jt.GetPosition() + k_;
-										if (start > end)
-										{
-											std::cout << l << ' ' << start << ' ' << end << std::endl;
-										}
-
-										blocksInstance_.push_back(BlockInstance(+currentBlock, jt.GetChrId(), it.GetPosition(), jt.GetPosition() + k_));
-									}
-									else
-									{
-										//blocksInstance_.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - finder.k_, it.GetPosition()));
-									}
+									break;
 								}
 
-								source.erase(kt);
-								break;
+								int64_t length[2];
+								for (size_t l = 0; l < 2; l++)
+								{
+									length[l] = event_[chr][i].fork.branch[l].GetPosition() - event_[chr][j].fork.branch[l].GetPosition();
+								}
+
+								auto diff = abs(length[0] - length[1]);
+								if (diff < minDiff)
+								{
+									minDiff = diff;
+									bestJ = j;
+								}
+							}
+						}
+
+						if (bestJ != i)
+						{
+							int64_t currentBlock = ++blocksFound_;
+							for (size_t l = 0; l < 2; l++)
+							{
+								auto it = event_[chr][i].fork.branch[l];
+								auto jt = event_[chr][bestJ].fork.branch[l];
+								if (jt.IsPositiveStrand())
+								{
+									auto start = it.GetPosition();
+									auto end = jt.GetPosition() + k_;
+									//length.push_back(end - start);
+									blocksInstance_.push_back(BlockInstance(+currentBlock, jt.GetChrId(), it.GetPosition(), jt.GetPosition() + k_));
+								}
+								else
+								{
+									//blocksInstance_.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - finder.k_, it.GetPosition()));
+								}
 							}
 						}
 					}
