@@ -219,35 +219,26 @@ namespace Sibelia
 		{
 			for (size_t chr = 0; chr < event_.size(); chr++)
 			{
+				std::list<Event> q;
 				std::sort(event_[chr].begin(), event_[chr].end());
 				for (int64_t i = 1; i < event_[chr].size(); i++)
 				{
-					if (!event_[chr][i].fork.branch[0].IsPositiveStrand())
-					{
-						std::cerr << i;
-					}
-
 					if (!event_[chr][i].isSource)
 					{
-						int64_t bestJ = i;
 						int64_t minDiff = INT_MAX;
 						int64_t minLength = INT_MAX;
+						std::list<Event>::iterator bestJ = q.end();
 						auto & it = event_[chr][i].fork.branch[1];
-						for (int64_t j = i - 1; j >= 0; j--)
+						for(auto lt = q.begin(); lt != q.end(); ++lt)
 						{
-							auto & jt = event_[chr][j].fork.branch[1];
+							auto & jt = lt->fork.branch[1];
 							if (it.GetChrId() == jt.GetChrId() && it.IsPositiveStrand() == jt.IsPositiveStrand() &&
 								((it.IsPositiveStrand() && jt.GetPosition() < it.GetPosition()) || (!it.IsPositiveStrand() && jt.GetPosition() > it.GetPosition())))
 							{
-								if (!event_[chr][j].isSource)
-								{
-									continue;
-								}
-
 								int64_t length[2];
 								for (size_t l = 0; l < 2; l++)
 								{
-									length[l] = abs(event_[chr][i].fork.branch[l].GetPosition() - event_[chr][j].fork.branch[l].GetPosition());
+									length[l] = abs(event_[chr][i].fork.branch[l].GetPosition() - lt->fork.branch[l].GetPosition());
 								}
 
 								auto diff = abs(length[0] - length[1]);
@@ -255,18 +246,18 @@ namespace Sibelia
 								{
 									minLength = Min(length[0], length[1]);
 									minDiff = diff;
-									bestJ = j;
+									bestJ = lt;
 								}
 							}
 						}
 
-						if (bestJ < i && minLength > minBlockSize_)
+						if (bestJ != q.end() && minLength > minBlockSize_)
 						{
 							std::vector<int64_t> length;
 							int64_t currentBlock = ++blocksFound_;
 							for (size_t l = 0; l < 2; l++)
 							{
-								auto it = event_[chr][bestJ].fork.branch[l];
+								auto it = bestJ->fork.branch[l];
 								auto jt = event_[chr][i].fork.branch[l];
 								if (jt.IsPositiveStrand())
 								{
@@ -284,9 +275,13 @@ namespace Sibelia
 									blocksInstance_.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - k_, it.GetPosition()));
 								}
 							}
-
+							q.erase(bestJ);
 							//std::cerr << length[0] - length[1] << std::endl;
 						}
+					}
+					else
+					{
+						q.push_front(event_[chr][i]);
 					}
 				}
 			}
