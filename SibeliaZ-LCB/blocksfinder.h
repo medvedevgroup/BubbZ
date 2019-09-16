@@ -234,7 +234,7 @@ namespace Sibelia
 							{
 								if (!event_[chr][j].isSource)
 								{
-									break;
+									continue;
 								}
 
 								int64_t length[2];
@@ -244,7 +244,7 @@ namespace Sibelia
 								}
 
 								auto diff = abs(length[0] - length[1]);
-								if (diff < minDiff)
+								if (diff < minDiff && diff < 1000)
 								{
 									minDiff = diff;
 									bestJ = j;
@@ -252,8 +252,9 @@ namespace Sibelia
 							}
 						}
 
-						if (bestJ != i)
+						if (bestJ < i)
 						{
+							std::vector<int64_t> length;
 							int64_t currentBlock = ++blocksFound_;
 							for (size_t l = 0; l < 2; l++)
 							{
@@ -263,7 +264,7 @@ namespace Sibelia
 								{
 									auto start = it.GetPosition();
 									auto end = jt.GetPosition() + k_;
-									//length.push_back(end - start);
+									length.push_back(end - start);									
 									blocksInstance_.push_back(BlockInstance(+currentBlock, jt.GetChrId(), it.GetPosition(), jt.GetPosition() + k_));
 								}
 								else
@@ -271,6 +272,8 @@ namespace Sibelia
 									//blocksInstance_.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - finder.k_, it.GetPosition()));
 								}
 							}
+
+							//std::cerr << length[0] - length[1] << std::endl;
 						}
 					}
 				}
@@ -433,62 +436,34 @@ namespace Sibelia
 
 		void GenerateOutput(const std::string & outDir, bool genSeq)
 		{
+			const auto & trimmedBlocks = blocksInstance_;
 			std::vector<std::vector<bool> > covered(storage_.GetChrNumber());
 			for (size_t i = 0; i < covered.size(); i++)
 			{
 				covered[i].assign(storage_.GetChrSequence(i).size() + 1, false);
 			}
 
-			int64_t trimmedId = 1;
-			std::vector<IndexPair> group;
-			std::vector<BlockInstance> buffer;
-			std::vector<BlockInstance> trimmedBlocks;
-			std::vector<int> copiesCount_(blocksFound_ + 1, 0);
-			for (auto b : blocksInstance_)
+			for (auto & b : blocksInstance_)
 			{
-				copiesCount_[b.GetBlockId()]++;
+				for (size_t i = b.GetStart(); i < b.GetEnd(); i++)
+				{
+					covered[b.GetChrId()][i] = true;
+				}
 			}
 
-			GroupBy(blocksInstance_, SortByMultiplicity(copiesCount_), std::back_inserter(group));
-			for (auto g : group)
+			size_t total = 0;
+			size_t totalCovered = 0;
+			for (auto & chr : covered)
 			{
-				buffer.clear();
-				for (size_t i = g.first; i < g.second; i++)
-				{
-					size_t chr = blocksInstance_[i].GetChrId();
-					size_t start = blocksInstance_[i].GetStart();
-					size_t end = blocksInstance_[i].GetEnd();
-					for (; covered[chr][start] && start < end; start++);
-					for (; covered[chr][end] && end > start; end--);
-					if (end - start >= minBlockSize_)
-					{
-						buffer.push_back(BlockInstance(blocksInstance_[i].GetSign() * trimmedId, chr, start, end));
-						std::fill(covered[chr].begin() + start, covered[chr].begin() + end, true);
-					}
-				}
-
-				if (buffer.size() > 1)
-				{
-					trimmedId++;
-					for (const auto & it : buffer)
-					{
-						trimmedBlocks.push_back(it);
-					}
-				}
-				else
-				{
-					for (const auto & it : buffer)
-					{
-						std::fill(covered[it.GetChrId()].begin() + it.GetStart(), covered[it.GetChrId()].begin() + it.GetEnd(), false);
-					}
-				}
+				total += chr.size();
+				totalCovered += std::count(chr.begin(), chr.end(), true);
 			}
 
 			std::cout.setf(std::cout.fixed);
 			std::cout.precision(2);
-			std::cout << "Blocks found: " << trimmedId - 1 << std::endl;
-			//std::cout << "Coverage: " << CalculateCoverage(trimmedBlocks) << std::endl;
-			std::sort(trimmedBlocks.begin(), trimmedBlocks.end());
+			std::cout << "Blocks found: " << blocksFound_ << std::endl;
+			std::cout << "Coverage: " << double(totalCovered) / total << std::endl;
+
 			CreateOutDirectory(outDir);
 			std::string blocksDir = outDir + "/blocks";
 			ListBlocksIndicesGFF(trimmedBlocks, outDir + "/" + "blocks_coords.gff");
@@ -497,6 +472,9 @@ namespace Sibelia
 				CreateOutDirectory(blocksDir);
 				ListBlocksSequences(trimmedBlocks, blocksDir);
 			}
+
+			ListBlocksIndices(trimmedBlocks, outDir + "/" + "blocks_coords.txt");
+
 		}
 
 		struct BranchData
