@@ -212,7 +212,36 @@ namespace Sibelia
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, shuffle.size()), CheckIfSource(*this, shuffle));
 			std::cout << "Time: " << time(0) - mark << std::endl;
 			std::cout << source_.size() << std::endl;
-			CheckSmart();
+			CheckSmart2();
+		}
+
+		void CheckSmart2()
+		{
+			int64_t intervals = 0;
+			for (size_t chr = 0; chr < event_.size(); chr++)
+			{
+				std::list<Event> q;
+				std::sort(event_[chr].begin(), event_[chr].end());
+				int64_t cnt = 0;
+				for (int64_t i = 0; i < event_[chr].size(); i++)
+				{
+					if (event_[chr][i].isSource)
+					{
+						++cnt;
+					}
+					else
+					{
+						--cnt;
+					}
+
+					if (cnt == 0)
+					{
+						intervals++;
+					}
+				}
+			}
+
+			std::cout << intervals << std::endl;
 		}
 
 		void CheckSmart()
@@ -241,8 +270,9 @@ namespace Sibelia
 									length[l] = abs(event_[chr][i].fork.branch[l].GetPosition() - lt->fork.branch[l].GetPosition());
 								}
 
-								auto diff = abs(length[0] - length[1]);
-								if (diff < minDiff && diff < 1000)
+								//auto diff = abs(length[0] - length[1]);
+								auto diff = length[1];
+								if (diff < minDiff)
 								{
 									minLength = Min(length[0], length[1]);
 									minDiff = diff;
