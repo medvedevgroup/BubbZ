@@ -202,17 +202,15 @@ namespace Sibelia
 			time_t mark = time(0);
 			count_ = 0;
 			
-			starter_ = 0;
-			progressCount_ = 0;
-
-			event_.resize(storage_.GetChrNumber());
-			std::cout << storage_.GetChrVerticesCount(0) << std::endl;
 			time_t start = clock();
 			starter_ = 0;
-			tbb::parallel_for(tbb::blocked_range<size_t>(0, shuffle.size()), CheckIfSource(*this, shuffle));
-			std::cout << "Time: " << time(0) - mark << std::endl;
-			std::cout << source_.size() << std::endl;
-			CheckSmart2();
+			progressCount_ = 0;
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, storage_.GetChrNumber()), ChrSweep(*this));
+			std::sort(template_.begin(), template_.end());
+			RunTemplate runner(*this);
+			auto rng = tbb::blocked_range<size_t>(0, template_.size());
+			runner(rng);
+			std::cout << double(clock() - start) / CLOCKS_PER_SEC << std::endl;
 		}
 
 		void CheckSmart2()
@@ -248,70 +246,78 @@ namespace Sibelia
 		{
 			for (size_t chr = 0; chr < event_.size(); chr++)
 			{
-				std::list<Event> q;
+				
 				std::sort(event_[chr].begin(), event_[chr].end());
-				for (int64_t i = 1; i < event_[chr].size(); i++)
+				for(bool any = true; any;)
 				{
-					if (!event_[chr][i].isSource)
+					any = false;
+					std::list<Event> q;
+					for (int64_t i = 1; i < event_[chr].size(); i++)
 					{
-						int64_t minDiff = INT_MAX;
-						int64_t minLength = INT_MAX;
-						std::list<Event>::iterator bestJ = q.end();
-						auto & it = event_[chr][i].fork.branch[1];
-						for(auto lt = q.begin(); lt != q.end(); ++lt)
+						if (event_[chr][i].isDone)
 						{
-							auto & jt = lt->fork.branch[1];
-							if (it.GetChrId() == jt.GetChrId() && it.IsPositiveStrand() == jt.IsPositiveStrand() &&
-								((it.IsPositiveStrand() && jt.GetPosition() < it.GetPosition()) || (!it.IsPositiveStrand() && jt.GetPosition() > it.GetPosition())))
-							{
-								int64_t length[2];
-								for (size_t l = 0; l < 2; l++)
-								{
-									length[l] = abs(event_[chr][i].fork.branch[l].GetPosition() - lt->fork.branch[l].GetPosition());
-								}
+							continue;
+						}
 
-								//auto diff = abs(length[0] - length[1]);
-								auto diff = length[1];
-								if (diff < minDiff)
+						if (!event_[chr][i].isSource)
+						{
+							size_t count = 0;
+							int64_t minLength = 0;
+							std::list<Event>::iterator bestJ = q.end();
+							auto & it = event_[chr][i].fork.branch[1];
+
+							for (auto lt = q.begin(); lt != q.end() && count < 2; ++lt)
+							{
+								auto & jt = lt->fork.branch[1];
+								if (it.GetChrId() == jt.GetChrId() && it.IsPositiveStrand() == jt.IsPositiveStrand() &&
+									((it.IsPositiveStrand() && jt.GetPosition() < it.GetPosition()) || (!it.IsPositiveStrand() && jt.GetPosition() > it.GetPosition())))
 								{
+									int64_t length[2];
+									for (size_t l = 0; l < 2; l++)
+									{
+										length[l] = abs(event_[chr][i].fork.branch[l].GetPosition() - lt->fork.branch[l].GetPosition());
+									}
+
+									count++;
 									minLength = Min(length[0], length[1]);
-									minDiff = diff;
 									bestJ = lt;
 								}
 							}
-						}
 
-						if (bestJ != q.end() && minLength > minBlockSize_)
-						{
-							std::vector<int64_t> length;
-							int64_t currentBlock = ++blocksFound_;
-							for (size_t l = 0; l < 2; l++)
+							if (bestJ != q.end() && minLength > minBlockSize_ && count == 1)
 							{
-								auto it = bestJ->fork.branch[l];
-								auto jt = event_[chr][i].fork.branch[l];
-								if (jt.IsPositiveStrand())
+								any = true;
+								std::vector<int64_t> length;
+								int64_t currentBlock = ++blocksFound_;
+								for (size_t l = 0; l < 2; l++)
 								{
-									auto start = it.GetPosition();
-									auto end = jt.GetPosition() + k_;
-									length.push_back(end - start);									
-									blocksInstance_.push_back(BlockInstance(+currentBlock, jt.GetChrId(), it.GetPosition(), jt.GetPosition() + k_));
+									auto it = bestJ->fork.branch[l];
+									bestJ->isDone = event_[chr][i].isDone = true;
+									auto jt = event_[chr][i].fork.branch[l];
+									if (jt.IsPositiveStrand())
+									{
+										auto start = it.GetPosition();
+										auto end = jt.GetPosition() + k_;
+										length.push_back(end - start);
+										blocksInstance_.push_back(BlockInstance(+currentBlock, jt.GetChrId(), it.GetPosition(), jt.GetPosition() + k_));
+									}
+									else
+									{
+										auto start = jt.GetPosition();
+										auto end = it.GetPosition() - k_;
+										//	if (start > end)
+										//		std::cerr << l << ' ' << start << ' ' << end << std::endl;
+										blocksInstance_.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - k_, it.GetPosition()));
+									}
 								}
-								else
-								{
-									auto start = jt.GetPosition();
-									auto end = it.GetPosition() - k_;
-								//	if (start > end)
-								//		std::cerr << l << ' ' << start << ' ' << end << std::endl;
-									blocksInstance_.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - k_, it.GetPosition()));
-								}
+								q.erase(bestJ);
+								//std::cerr << length[0] - length[1] << std::endl;
 							}
-							q.erase(bestJ);
-							//std::cerr << length[0] - length[1] << std::endl;
 						}
-					}
-					else
-					{
-						q.push_front(event_[chr][i]);
+						else
+						{
+							q.push_front(event_[chr][i]);
+						}
 					}
 				}
 			}
@@ -474,6 +480,7 @@ namespace Sibelia
 		void GenerateOutput(const std::string & outDir, bool genSeq)
 		{
 			const auto & trimmedBlocks = blocksInstance_;
+			/*
 			std::vector<std::vector<bool> > covered(storage_.GetChrNumber());
 			for (size_t i = 0; i < covered.size(); i++)
 			{
@@ -495,11 +502,12 @@ namespace Sibelia
 				total += chr.size();
 				totalCovered += std::count(chr.begin(), chr.end(), true);
 			}
+			*/
 
 			std::cout.setf(std::cout.fixed);
 			std::cout.precision(2);
 			std::cout << "Blocks found: " << blocksFound_ << std::endl;
-			std::cout << "Coverage: " << double(totalCovered) / total << std::endl;
+			//std::cout << "Coverage: " << double(totalCovered) / total << std::endl;
 
 			CreateOutDirectory(outDir);
 			std::string blocksDir = outDir + "/blocks";
@@ -569,10 +577,12 @@ namespace Sibelia
 
 		struct Event
 		{
+
+			bool isDone;
 			bool isSource;
 			Fork fork;
 
-			Event(bool isSource, Fork fork) : isSource(isSource), fork(fork)
+			Event(bool isSource, Fork fork) : isSource(isSource), fork(fork), isDone(false)
 			{
 
 			}

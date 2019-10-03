@@ -116,26 +116,37 @@ namespace Sibelia
 				{
 					bool found = false;
 					auto jt = vit.SequentialIterator();
+					std::vector<Instance> newInstance;
+					std::vector<std::multiset<Instance>::iterator > toRemove;
 					if (jt != it && jt.GetChrId() >= it.GetChrId())
 					{
 						auto kt = instance_.upper_bound(Instance(jt));
 						if (kt != instance_.begin())
 						{
-							--kt;
-							if (kt->end[1].GetChrId() == jt.GetChrId() && kt->end[1].IsPositiveStrand() == jt.IsPositiveStrand())
+							do
 							{
-								successor[0] = it;
-								successor[1] = jt;
-								if (Compatible(*kt, successor, maxBranchSize))
+								--kt;
+								if (kt->end[1].GetChrId() == jt.GetChrId() && kt->end[1].IsPositiveStrand() == jt.IsPositiveStrand())
 								{
-									found = true;
-									Instance update(*kt);
-									update.end[0] = it;
-									update.end[1] = jt;
-									instance_.erase(kt);
-									instance_.insert(update);
+									successor[0] = it;
+									successor[1] = jt;
+									if (Compatible(*kt, successor, maxBranchSize))
+									{
+										found = true;
+										Instance newUpdate(*kt);
+										newUpdate.end[0] = it;
+										newUpdate.end[1] = jt;
+										toRemove.push_back(kt);
+										newInstance.push_back(newUpdate);
+										//instance_.erase(kt);
+										//instance_.insert(update);
+									}
 								}
-							}
+								else
+								{
+									break;
+								}
+							} while (kt != instance_.begin());
 						}
 
 						if (!found)
@@ -144,6 +155,21 @@ namespace Sibelia
 							novel.start[0] = novel.end[0] = it;
 							novel.start[1] = novel.end[1] = jt;
 							instance_.insert(novel);
+						}
+						else
+						{
+							for (auto it : toRemove)
+							{
+								instance_.erase(it);
+							}
+
+							for (auto & inst : newInstance)
+							{
+								instance_.insert(inst);
+							}
+
+							toRemove.clear();
+							newInstance.clear();
 						}
 					}
 				}
