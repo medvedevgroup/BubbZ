@@ -5,10 +5,7 @@
 #include <cassert>
 #include <algorithm>
 
-#include <tbb/mutex.h>
-#include <tbb/parallel_for.h>
-#include <tbb/blocked_range.h>
-#include <tbb/task_scheduler_init.h>
+#include <omp.h>
 
 #include "path.h"
 
@@ -107,7 +104,7 @@ namespace Sibelia
 
 		}
 
-		void Sweep(int64_t minBlockSize, int64_t maxBranchSize, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, tbb::mutex & outMutex)
+		void Sweep(int64_t minBlockSize, int64_t maxBranchSize, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, omp_lock_t & outMutex)
 		{
 			JunctionStorage::JunctionSequentialIterator successor[2];
 			for (auto it = start_; it.Valid(); ++it)
@@ -261,10 +258,10 @@ namespace Sibelia
 		}
 		*/
 
-		void ReportBlock(std::vector<BlockInstance> & blocksInstance, tbb::mutex & outMutex, int64_t k, std::atomic<int64_t> & blocksFound, const Instance & inst)
+		void ReportBlock(std::vector<BlockInstance> & blocksInstance, omp_lock_t & outMutex, int64_t k, std::atomic<int64_t> & blocksFound, const Instance & inst)
 		{
 			int64_t currentBlock = ++blocksFound;
-			tbb::mutex::scoped_lock lock(outMutex);
+			omp_set_lock(&outMutex);
 			for (size_t l = 0; l < 2; l++)
 			{
 				auto it = inst.start[l];
@@ -278,6 +275,7 @@ namespace Sibelia
 					blocksInstance.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - k, it.GetPosition()));
 				}
 			}
+			omp_unset_lock(&outMutex);
 		}
 		
 	};

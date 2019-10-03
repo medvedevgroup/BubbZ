@@ -16,7 +16,6 @@
 #include <functional>
 #include <unordered_map>
 
-#include <tbb/parallel_for.h>
 
 #include "sweeper.h"
 
@@ -184,7 +183,6 @@ namespace Sibelia
 			maxFlankingSize_ = maxFlankingSize;
 
 			using namespace std::placeholders;
-			tbb::task_scheduler_init init(static_cast<int>(threads));
 
 			std::vector<int64_t> shuffle;
 			for (int64_t v = -storage_.GetVerticesNumber() + 1; v < storage_.GetVerticesNumber(); v++)
@@ -205,7 +203,14 @@ namespace Sibelia
 			time_t start = clock();
 			starter_ = 0;
 			progressCount_ = 0;
-			tbb::parallel_for(tbb::blocked_range<size_t>(0, storage_.GetChrNumber()), ChrSweep(*this));
+			currentIndex_ = 0;
+			omp_init_lock(&globalLock_);
+			#pragma omp parallel num_threads(threads)
+			{
+				ChrSweep process(*this);
+				process();
+			}
+			omp_destroy_lock(&globalLock_);
 			std::cout << double(clock() - start) / CLOCKS_PER_SEC << std::endl;
 		}
 
@@ -219,20 +224,39 @@ namespace Sibelia
 
 			}
 
-			void operator()(tbb::blocked_range<size_t> & range) const
+			void operator()() const
 			{
-				for (size_t r = range.begin(); r != range.end(); r++)
+				size_t endIndex = finder.storage_.GetChrNumber();
+				for(bool go = true; go;)
 				{
-					Sweeper sweeper(finder.storage_.Begin(r));
-					sweeper.Sweep(finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.blocksInstance_, finder.globalMutex_);
+					size_t nowChr;
 					{
-						tbb::mutex::scoped_lock lock(finder.globalMutex_);
-						std::cout << ++finder.progressCount_ << ' ' << finder.storage_.GetChrNumber() << std::endl;
+						omp_set_lock(&finder.globalLock_);
+						if (finder.currentIndex_ < endIndex)
+						{
+							nowChr = finder.currentIndex_++;
+						}
+						else
+						{
+							go = false;
+						}
+
+						omp_unset_lock(&finder.globalLock_);
 					}
+
+					if (go)
+					{
+						Sweeper sweeper(finder.storage_.Begin(nowChr));
+						sweeper.Sweep(finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.blocksInstance_, finder.globalLock_);
+						{
+							std::cout << ++finder.progressCount_ << ' ' << finder.storage_.GetChrNumber() << std::endl;
+						}
+					}
+					
 				}
 			}
 		};
-
+		/*
 		struct RunTemplate
 		{
 		public:
@@ -300,7 +324,7 @@ namespace Sibelia
 				}
 			}
 		};
-		
+		*/
 		
 
 		void ListBlocksSequences(const BlockList & block, const std::string & directory) const
@@ -616,7 +640,7 @@ namespace Sibelia
 
 			return b;
 		}
-
+		/*
 		struct CheckIfSource
 		{
 		public:
@@ -687,7 +711,7 @@ namespace Sibelia
 				}
 			}
 		};
-
+		*/
 
 		template<class T>
 		static void AddIfNotExists(std::vector<T> & adj, T value)
@@ -750,6 +774,7 @@ namespace Sibelia
 		size_t progressPortion_;
 		std::atomic<int64_t> count_;
 		std::atomic<int64_t> starter_;
+		std::atomic<size_t> currentIndex_;
 		std::atomic<int64_t> blocksFound_;
 		std::vector<size_t> pointComponent_;
 
@@ -759,8 +784,7 @@ namespace Sibelia
 		int64_t maxBranchSize_;
 		int64_t maxFlankingSize_;
 		JunctionStorage & storage_;
-		tbb::mutex progressMutex_;
-		tbb::mutex globalMutex_;
+		omp_lock_t globalLock_;
 		std::ofstream debugOut_;
 		std::vector<Template> template_;
 		std::vector<BlockInstance> blocksInstance_;
