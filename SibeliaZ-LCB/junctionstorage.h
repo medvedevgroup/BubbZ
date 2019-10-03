@@ -10,7 +10,6 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include <tbb/mutex.h>
 
 #include <streamfastaparser.h>
 #include <junctionapi.h>
@@ -552,38 +551,6 @@ namespace Sibelia
 
 		};
 
-		void LockRange(JunctionSequentialIterator start, JunctionSequentialIterator end, std::pair<size_t, size_t> & prevIdx)
-		{
-			do
-			{
-				size_t idx = MutexIdx(start.GetChrId(), start.GetIndex());
-				if (start.GetChrId() != prevIdx.first || idx != prevIdx.second)
-				{
-					mutex_[start.GetChrId()][idx].mutex.lock();
-					prevIdx.first = start.GetChrId();
-					prevIdx.second = idx;
-				}
-
-
-			} while (start++ != end);
-		}
-
-		void UnlockRange(JunctionSequentialIterator start, JunctionSequentialIterator end, std::pair<size_t, size_t> & prevIdx)
-		{
-			do
-			{
-				size_t idx = MutexIdx(start.GetChrId(), start.GetIndex());
-				if (start.GetChrId() != prevIdx.first || idx != prevIdx.second)
-				{
-					mutex_[start.GetChrId()][idx].mutex.unlock();
-					prevIdx.first = start.GetChrId();
-					prevIdx.second = idx;
-				}
-
-
-			} while (start++ != end);
-		}
-
 		int64_t GetChrNumber() const
 		{
 			return position_.size();
@@ -854,16 +821,6 @@ namespace Sibelia
 					vertex_[i][j].revCh = pos_ > 0 ? TwoPaCo::DnaChar::ReverseChar(sequence_[chr][pos_ - 1]) : 'N';
 				}
 			}
-
-			mutex_.resize(GetChrNumber());
-			chrSizeBits_.resize(GetChrNumber(), 1);
-			for (mutexBits_ = 3; (int64_t(1) << mutexBits_) < threads * (1 << 7); mutexBits_++);
-			for (size_t i = 0; i < mutex_.size(); i++)
-			{
-				mutex_[i].reset(new FlaggedMutex[int64_t(1) << mutexBits_]);
-				for (; size_t(int64_t(1) << chrSizeBits_[i]) <= chrSize_[i]; chrSizeBits_[i]++);
-				chrSizeBits_[i] = max(int64_t(0), chrSizeBits_[i] - mutexBits_);
-			}
 		}
 
 		JunctionStorage() {}
@@ -910,16 +867,7 @@ namespace Sibelia
 			return ret;
 		}
 
-		struct FlaggedMutex
-		{
-			FlaggedMutex()
-			{
-
-			}
-
-			tbb::mutex mutex;
-		};
-
+		
 		int64_t k_;
 		int64_t mutexBits_;
 		std::map<std::string, size_t> sequenceId_;
@@ -931,7 +879,6 @@ namespace Sibelia
 		std::vector<size_t> chrSize_;
 		std::vector<VertexVector> vertex_;
 		std::vector<std::unique_ptr<Position[]> > position_;
-		std::vector<std::unique_ptr<FlaggedMutex[]> > mutex_;
 		static JunctionStorage * this_;
 	};
 }
