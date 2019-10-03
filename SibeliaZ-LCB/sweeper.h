@@ -107,7 +107,7 @@ namespace Sibelia
 
 		}
 
-		void Sweep(int64_t minBlockSize, int64_t maxBranchSize, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<Template> & templateInstance , tbb::mutex & outMutex)
+		void Sweep(int64_t minBlockSize, int64_t maxBranchSize, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, tbb::mutex & outMutex)
 		{
 			JunctionStorage::JunctionSequentialIterator successor[2];
 			for (auto it = start_; it.Valid(); ++it)
@@ -180,7 +180,7 @@ namespace Sibelia
 					{
 						if (inst->Valid(minBlockSize))
 						{
-							ReportBlock(templateInstance, outMutex, k, blocksFound, *inst);
+							ReportBlock(blocksInstance, outMutex, k, blocksFound, *inst);
 						}
 
 						inst = instance_.erase(inst);
@@ -196,7 +196,7 @@ namespace Sibelia
 			{
 				if (inst->Valid(minBlockSize))
 				{
-					ReportBlock(templateInstance, outMutex, k, blocksFound, *inst);
+					ReportBlock(blocksInstance, outMutex, k, blocksFound, *inst);
 				}
 			}
 		}
@@ -243,7 +243,8 @@ namespace Sibelia
 			return false;
 		}
 
-		
+
+		/*
 		void ReportBlock(std::vector<Template> & templateInstance, tbb::mutex & outMutex, int64_t k, std::atomic<int64_t> & blocksFound, const Instance & inst)
 		{
 			int64_t currentBlock = ++blocksFound;
@@ -258,9 +259,8 @@ namespace Sibelia
 				}
 			}
 		}
-		
+		*/
 
-		/*
 		void ReportBlock(std::vector<BlockInstance> & blocksInstance, tbb::mutex & outMutex, int64_t k, std::atomic<int64_t> & blocksFound, const Instance & inst)
 		{
 			int64_t currentBlock = ++blocksFound;
@@ -279,7 +279,7 @@ namespace Sibelia
 				}
 			}
 		}
-		*/
+		
 	};
 }
 

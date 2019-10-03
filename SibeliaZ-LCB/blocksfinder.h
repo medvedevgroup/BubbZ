@@ -206,121 +206,7 @@ namespace Sibelia
 			starter_ = 0;
 			progressCount_ = 0;
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, storage_.GetChrNumber()), ChrSweep(*this));
-			std::sort(template_.begin(), template_.end());
-			RunTemplate runner(*this);
-			auto rng = tbb::blocked_range<size_t>(0, template_.size());
-			runner(rng);
 			std::cout << double(clock() - start) / CLOCKS_PER_SEC << std::endl;
-		}
-
-		void CheckSmart2()
-		{
-			int64_t intervals = 0;
-			for (size_t chr = 0; chr < event_.size(); chr++)
-			{
-				std::list<Event> q;
-				std::sort(event_[chr].begin(), event_[chr].end());
-				int64_t cnt = 0;
-				for (int64_t i = 0; i < event_[chr].size(); i++)
-				{
-					if (event_[chr][i].isSource)
-					{
-						++cnt;
-					}
-					else
-					{
-						--cnt;
-					}
-
-					if (cnt == 0)
-					{
-						intervals++;
-					}
-				}
-			}
-
-			std::cout << intervals << std::endl;
-		}
-
-		void CheckSmart()
-		{
-			for (size_t chr = 0; chr < event_.size(); chr++)
-			{
-				
-				std::sort(event_[chr].begin(), event_[chr].end());
-				for(bool any = true; any;)
-				{
-					any = false;
-					std::list<Event> q;
-					for (int64_t i = 1; i < event_[chr].size(); i++)
-					{
-						if (event_[chr][i].isDone)
-						{
-							continue;
-						}
-
-						if (!event_[chr][i].isSource)
-						{
-							size_t count = 0;
-							int64_t minLength = 0;
-							std::list<Event>::iterator bestJ = q.end();
-							auto & it = event_[chr][i].fork.branch[1];
-
-							for (auto lt = q.begin(); lt != q.end() && count < 2; ++lt)
-							{
-								auto & jt = lt->fork.branch[1];
-								if (it.GetChrId() == jt.GetChrId() && it.IsPositiveStrand() == jt.IsPositiveStrand() &&
-									((it.IsPositiveStrand() && jt.GetPosition() < it.GetPosition()) || (!it.IsPositiveStrand() && jt.GetPosition() > it.GetPosition())))
-								{
-									int64_t length[2];
-									for (size_t l = 0; l < 2; l++)
-									{
-										length[l] = abs(event_[chr][i].fork.branch[l].GetPosition() - lt->fork.branch[l].GetPosition());
-									}
-
-									count++;
-									minLength = Min(length[0], length[1]);
-									bestJ = lt;
-								}
-							}
-
-							if (bestJ != q.end() && minLength > minBlockSize_ && count == 1)
-							{
-								any = true;
-								std::vector<int64_t> length;
-								int64_t currentBlock = ++blocksFound_;
-								for (size_t l = 0; l < 2; l++)
-								{
-									auto it = bestJ->fork.branch[l];
-									bestJ->isDone = event_[chr][i].isDone = true;
-									auto jt = event_[chr][i].fork.branch[l];
-									if (jt.IsPositiveStrand())
-									{
-										auto start = it.GetPosition();
-										auto end = jt.GetPosition() + k_;
-										length.push_back(end - start);
-										blocksInstance_.push_back(BlockInstance(+currentBlock, jt.GetChrId(), it.GetPosition(), jt.GetPosition() + k_));
-									}
-									else
-									{
-										auto start = jt.GetPosition();
-										auto end = it.GetPosition() - k_;
-										//	if (start > end)
-										//		std::cerr << l << ' ' << start << ' ' << end << std::endl;
-										blocksInstance_.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - k_, it.GetPosition()));
-									}
-								}
-								q.erase(bestJ);
-								//std::cerr << length[0] - length[1] << std::endl;
-							}
-						}
-						else
-						{
-							q.push_front(event_[chr][i]);
-						}
-					}
-				}
-			}
 		}
 
 		struct ChrSweep
@@ -338,7 +224,7 @@ namespace Sibelia
 				for (size_t r = range.begin(); r != range.end(); r++)
 				{
 					Sweeper sweeper(finder.storage_.Begin(r));
-					sweeper.Sweep(finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.template_, finder.globalMutex_);
+					sweeper.Sweep(finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.blocksInstance_, finder.globalMutex_);
 					{
 						tbb::mutex::scoped_lock lock(finder.globalMutex_);
 						std::cout << ++finder.progressCount_ << ' ' << finder.storage_.GetChrNumber() << std::endl;
