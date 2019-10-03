@@ -143,6 +143,12 @@ namespace Sibelia
 								{
 									break;
 								}
+
+								if (abs(kt->end[1].GetPosition() - jt.GetPosition()) >= maxBranchSize)
+								{
+									break;
+								}
+
 							} while (kt != instance_.begin());
 						}
 
