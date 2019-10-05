@@ -135,16 +135,14 @@ namespace Sibelia
 										newUpdate.end[1] = jt;
 										toRemove.push_back(kt);
 										newInstance.push_back(newUpdate);
-										//instance_.erase(kt);
-										//instance_.insert(update);
+									}
+
+									if (it.GetPosition() - kt->end[0].GetPosition() > maxBranchSize)
+									{
+										break;
 									}
 								}
 								else
-								{
-									break;
-								}
-
-								if (abs(kt->end[1].GetPosition() - jt.GetPosition()) >= maxBranchSize)
 								{
 									break;
 								}
@@ -157,23 +155,37 @@ namespace Sibelia
 							Instance novel;
 							novel.start[0] = novel.end[0] = it;
 							novel.start[1] = novel.end[1] = jt;
-							instance_.insert(novel);
+							purge_.insert(instance_.insert(novel));
 						}
-						else
+						
+						for (auto it : toRemove)
 						{
-							for (auto it : toRemove)
-							{
-								instance_.erase(it);
-							}
-
-							for (auto & inst : newInstance)
-							{
-								instance_.insert(inst);
-							}
-
-							toRemove.clear();
-							newInstance.clear();
+							instance_.erase(it);
+							purge_.erase(it);
 						}
+						
+						while (purge_.size() > 0)
+						{
+							if (it.GetPosition() - (*purge_.begin())->end[0].GetPosition() >= maxBranchSize)
+							{
+								auto it = *purge_.begin();
+								purge_.erase(purge_.begin());
+								instance_.erase(*it);
+							}
+							else
+							{
+								break;
+							}
+						}
+
+						for (auto & inst : newInstance)
+						{
+							purge_.insert(instance_.insert(inst));
+						}
+
+						toRemove.clear();
+						newInstance.clear();
+	
 					}
 				}
 
@@ -205,8 +217,17 @@ namespace Sibelia
 		}
 
 	private:
+		typedef std::multiset<Instance>::iterator InstanceIt;
+		struct IteratorCmp
+		{
+			bool operator() (const InstanceIt & a, const InstanceIt & b) const
+			{
+				return a->end[0].GetPosition() < b->end[0].GetPosition();
+			}
+		};
 
 		std::multiset<Instance> instance_;
+		std::multiset<InstanceIt, IteratorCmp> purge_;
 		JunctionStorage::JunctionSequentialIterator start_;
 
 		bool Compatible(const Instance & inst, const JunctionStorage::JunctionSequentialIterator succ[2], int64_t maxBranchSize) const
