@@ -2,6 +2,7 @@
 #define _SWEEPER_H_
 
 #include <set>
+#include <queue>
 #include <cassert>
 #include <algorithm>
 
@@ -174,7 +175,7 @@ namespace Sibelia
 										newUpdate.end[1] = jt;
 										if (!InstanceFound(newUpdate))
 										{
-											purge_.insert(instance_[chrId].insert(newUpdate));
+											purge_.push(instance_[chrId].insert(newUpdate));
 											(const_cast<Instance&>(*kt)).hasNext = true;
 										}
 									}
@@ -197,25 +198,25 @@ namespace Sibelia
 							Instance newInstance;
 							newInstance.start[0] = newInstance.end[0] = it;
 							newInstance.start[1] = newInstance.end[1] = jt;
-							purge_.insert(instance_[chrId].insert(newInstance));
+							purge_.push(instance_[chrId].insert(newInstance));
 						}			
 					}
 				}
 
 				while (purge_.size() > 0)
 				{
-					int64_t diff = it.GetPosition() - (*purge_.begin())->end[0].GetPosition();
+					int64_t diff = it.GetPosition() - (purge_.top())->end[0].GetPosition();
 					if (diff >= maxBranchSize)
 					{
-						auto it = *purge_.begin();
+						auto it = purge_.top();
 						if (it->Valid(minBlockSize) && !it->hasNext)
 						{
 							ReportBlock(blocksInstance, outMutex, k, blocksFound, *it);
 						}
 
 						int64_t chrId = it->start[1].GetChrId();
-						purge_.erase(purge_.begin());
-						instance_[chrId].erase(*it);
+						purge_.pop();
+						instance_[chrId].erase(it);
 					}
 					else
 					{
@@ -224,11 +225,11 @@ namespace Sibelia
 				}
 			}
 
-			for (auto inst : purge_)
+			for(;purge_.size() > 0; purge_.pop())
 			{
-				if (inst->Valid(minBlockSize) && !inst->hasNext)
+				if (purge_.top()->Valid(minBlockSize) && !purge_.top()->hasNext)
 				{
-					ReportBlock(blocksInstance, outMutex, k, blocksFound, *inst);
+					ReportBlock(blocksInstance, outMutex, k, blocksFound, *purge_.top());
 				}
 			}
 		}
@@ -239,12 +240,12 @@ namespace Sibelia
 		{
 			bool operator() (const InstanceIt & a, const InstanceIt & b) const
 			{
-				return a->end[0].GetPosition() < b->end[0].GetPosition();
+				return a->end[0].GetPosition() > b->end[0].GetPosition();
 			}
 		};
 
 		std::vector<std::multiset<Instance> > instance_;
-		std::multiset<InstanceIt, IteratorCmp> purge_;
+		std::priority_queue<InstanceIt, std::vector<InstanceIt>, IteratorCmp> purge_;
 		JunctionStorage::JunctionSequentialIterator start_;
 
 		bool Compatible(const Instance & inst, const JunctionStorage::JunctionSequentialIterator succ[2], int64_t maxBranchSize) const
