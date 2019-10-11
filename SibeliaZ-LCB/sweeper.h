@@ -126,7 +126,7 @@ namespace Sibelia
 
 		bool InstanceFound(const Instance & newInstance)
 		{
-			auto er = instance_.equal_range(newInstance);
+			auto er = instance_[newInstance.start[1].GetChrId()].equal_range(newInstance);
 			for (auto it = er.first; it != er.second; ++it)
 			{
 				if (*it == newInstance)
@@ -138,8 +138,9 @@ namespace Sibelia
 			return false;
 		}
 
-		void Sweep(int64_t minBlockSize, int64_t maxBranchSize, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, omp_lock_t & outMutex)
+		void Sweep(JunctionStorage & storage, int64_t minBlockSize, int64_t maxBranchSize, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, omp_lock_t & outMutex)
 		{
+			instance_.resize(storage.GetChrNumber());
 			JunctionStorage::JunctionSequentialIterator successor[2];
 			for (auto it = start_; it.Valid(); ++it)
 			{
@@ -154,8 +155,9 @@ namespace Sibelia
 					auto jt = vit.SequentialIterator();
 					if (jt != it && jt.GetChrId() >= it.GetChrId())
 					{
-						auto kt = instance_.upper_bound(Instance(jt));
-						if (kt != instance_.begin())
+						int64_t chrId = jt.GetChrId();
+						auto kt = instance_[chrId].upper_bound(Instance(jt));
+						if (kt != instance_[chrId].begin())
 						{
 							do
 							{
@@ -170,9 +172,9 @@ namespace Sibelia
 										Instance newUpdate(*kt);
 										newUpdate.end[0] = it;
 										newUpdate.end[1] = jt;
-										if (!InstanceFound(newUpdate) && std::find(newInstance.begin(), newInstance.end(), newUpdate) == newInstance.end())
+										if (!InstanceFound(newUpdate))
 										{
-											newInstance.push_back(newUpdate);
+											purge_.insert(instance_[chrId].insert(newUpdate));
 											(const_cast<Instance&>(*kt)).hasNext = true;
 										}
 									}
@@ -187,15 +189,15 @@ namespace Sibelia
 									break;
 								}
 
-							} while (kt != instance_.begin());
+							} while (kt != instance_[chrId].begin());
 						}
 
 						if (!found)
 						{
-							Instance novel;
-							novel.start[0] = novel.end[0] = it;
-							novel.start[1] = novel.end[1] = jt;
-							newInstance.push_back(novel);
+							Instance newInstance;
+							newInstance.start[0] = newInstance.end[0] = it;
+							newInstance.start[1] = newInstance.end[1] = jt;
+							purge_.insert(instance_[chrId].insert(newInstance));
 						}			
 					}
 				}
@@ -211,24 +213,18 @@ namespace Sibelia
 							ReportBlock(blocksInstance, outMutex, k, blocksFound, *it);
 						}
 
+						int64_t chrId = it->start[1].GetChrId();
 						purge_.erase(purge_.begin());
-						instance_.erase(*it);
+						instance_[chrId].erase(*it);
 					}
 					else
 					{
 						break;
 					}
 				}
-
-				for (auto & inst : newInstance)
-				{
-					purge_.insert(instance_.insert(inst));
-				}
-
-				newInstance.clear();
 			}
 
-			for (auto inst = instance_.begin(); inst != instance_.end(); ++inst)
+			for (auto inst : purge_)
 			{
 				if (inst->Valid(minBlockSize) && !inst->hasNext)
 				{
@@ -247,7 +243,7 @@ namespace Sibelia
 			}
 		};
 
-		std::multiset<Instance> instance_;
+		std::vector<std::multiset<Instance> > instance_;
 		std::multiset<InstanceIt, IteratorCmp> purge_;
 		JunctionStorage::JunctionSequentialIterator start_;
 

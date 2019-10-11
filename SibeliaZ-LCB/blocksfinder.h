@@ -247,7 +247,7 @@ namespace Sibelia
 					if (go)
 					{
 						Sweeper sweeper(finder.storage_.Begin(nowChr));
-						sweeper.Sweep(finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.blocksInstance_, finder.globalLock_);
+						sweeper.Sweep(finder.storage_, finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.blocksInstance_, finder.globalLock_);
 						{
 							std::cout << ++finder.progressCount_ << ' ' << finder.storage_.GetChrNumber() << std::endl;
 						}
