@@ -147,11 +147,11 @@ namespace Sibelia
 					//std::cout << instance_.size() << ' ';
 				}
 
+				std::vector<Instance> newInstance;
 				for (JunctionStorage::JunctionIterator vit(it.GetVertexId()); vit.Valid(); ++vit)
 				{
 					bool found = false;
 					auto jt = vit.SequentialIterator();
-					std::vector<Instance> newInstance;
 					if (jt != it && jt.GetChrId() >= it.GetChrId())
 					{
 						auto kt = instance_.upper_bound(Instance(jt));
@@ -195,36 +195,37 @@ namespace Sibelia
 							Instance novel;
 							novel.start[0] = novel.end[0] = it;
 							novel.start[1] = novel.end[1] = jt;
-							purge_.insert(instance_.insert(novel));
-						}
-						
-						while (purge_.size() > 0)
-						{
-							if (it.GetPosition() - (*purge_.begin())->end[0].GetPosition() >= maxBranchSize)
-							{
-								auto it = *purge_.begin();
-								if (it->Valid(minBlockSize) && !it->hasNext)
-								{
-									ReportBlock(blocksInstance, outMutex, k, blocksFound, *it);
-								}
-
-								purge_.erase(purge_.begin());
-								instance_.erase(*it);
-							}
-							else
-							{
-								break;
-							}
-						}
-
-						for (auto & inst : newInstance)
-						{
-							purge_.insert(instance_.insert(inst));
-						}
-
-						newInstance.clear();
+							newInstance.push_back(novel);
+						}			
 					}
 				}
+
+				while (purge_.size() > 0)
+				{
+					int64_t diff = it.GetPosition() - (*purge_.begin())->end[0].GetPosition();
+					if (diff >= maxBranchSize)
+					{
+						auto it = *purge_.begin();
+						if (it->Valid(minBlockSize) && !it->hasNext)
+						{
+							ReportBlock(blocksInstance, outMutex, k, blocksFound, *it);
+						}
+
+						purge_.erase(purge_.begin());
+						instance_.erase(*it);
+					}
+					else
+					{
+						break;
+					}
+				}
+
+				for (auto & inst : newInstance)
+				{
+					purge_.insert(instance_.insert(inst));
+				}
+
+				newInstance.clear();
 			}
 
 			for (auto inst = instance_.begin(); inst != instance_.end(); ++inst)
