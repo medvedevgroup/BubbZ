@@ -196,13 +196,19 @@ namespace Sibelia
 			count_ = 0;
 			
 			time_t start = clock();
-			starter_ = 0;
 			progressCount_ = 0;
 			currentIndex_ = 0;
+			workInstance_.resize(threads);
 			#pragma omp parallel num_threads(threads)
 			{
 				ChrSweep process(*this);
 				process();
+			}
+
+			for (auto & outVector : workInstance_)
+			{
+				std::copy(outVector.begin(), outVector.end(), std::back_inserter(blocksInstance_));
+				outVector.clear();
 			}
 
 			std::cout << double(clock() - start) / CLOCKS_PER_SEC << std::endl;
@@ -215,11 +221,11 @@ namespace Sibelia
 
 			ChrSweep(BlocksFinder & finder) : finder(finder)
 			{
-
 			}
 
 			void operator()() const
 			{
+				std::vector<std::multiset<Sweeper::Instance> > instance(finder.storage_.GetChrNumber());
 				size_t endIndex = finder.storage_.GetChrNumber();
 				for(bool go = true; go;)
 				{
@@ -239,7 +245,7 @@ namespace Sibelia
 					if (go)
 					{
 						Sweeper sweeper(finder.storage_.Begin(nowChr));
-						sweeper.Sweep(finder.storage_, finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.blocksInstance_);
+						sweeper.Sweep(finder.storage_, finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.workInstance_[omp_get_thread_num()], instance);
 						{
 							std::cout << ++finder.progressCount_ << ' ' << finder.storage_.GetChrNumber() << std::endl;
 						}
@@ -373,10 +379,8 @@ namespace Sibelia
 		size_t progressCount_;
 		size_t progressPortion_;
 		std::atomic<int64_t> count_;
-		std::atomic<int64_t> starter_;
 		std::atomic<size_t> currentIndex_;
 		std::atomic<int64_t> blocksFound_;
-		std::vector<size_t> pointComponent_;
 
 		bool scoreFullChains_;
 		int64_t scalingFactor_;
@@ -385,8 +389,9 @@ namespace Sibelia
 		int64_t maxFlankingSize_;
 		JunctionStorage & storage_;
 		std::ofstream debugOut_;
-		std::vector<Template> template_;
 		std::vector<BlockInstance> blocksInstance_;
+		std::vector<std::vector<BlockInstance> > workInstance_;
+
 
 		//std::ofstream forkLog;
 
