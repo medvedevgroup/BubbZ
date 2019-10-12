@@ -79,11 +79,6 @@ namespace Sibelia
 
 			bool operator < (const Instance & cmp) const
 			{
-				if (end[1].GetChrId() != cmp.end[1].GetChrId())
-				{
-					return end[1].GetChrId() < cmp.end[1].GetChrId();
-				}
-
 				if (end[1].IsPositiveStrand() != cmp.end[1].IsPositiveStrand())
 				{
 					return end[1].IsPositiveStrand() < cmp.end[1].IsPositiveStrand();
