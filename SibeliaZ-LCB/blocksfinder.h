@@ -199,13 +199,12 @@ namespace Sibelia
 			starter_ = 0;
 			progressCount_ = 0;
 			currentIndex_ = 0;
-			omp_init_lock(&globalLock_);
 			#pragma omp parallel num_threads(threads)
 			{
 				ChrSweep process(*this);
 				process();
 			}
-			omp_destroy_lock(&globalLock_);
+
 			std::cout << double(clock() - start) / CLOCKS_PER_SEC << std::endl;
 		}
 
@@ -225,8 +224,8 @@ namespace Sibelia
 				for(bool go = true; go;)
 				{
 					size_t nowChr;
+					#pragma omp critical
 					{
-						omp_set_lock(&finder.globalLock_);
 						if (finder.currentIndex_ < endIndex)
 						{
 							nowChr = finder.currentIndex_++;
@@ -235,8 +234,6 @@ namespace Sibelia
 						{
 							go = false;
 						}
-
-						omp_unset_lock(&finder.globalLock_);
 					}
 
 					if (go)
@@ -387,7 +384,6 @@ namespace Sibelia
 		int64_t maxBranchSize_;
 		int64_t maxFlankingSize_;
 		JunctionStorage & storage_;
-		omp_lock_t globalLock_;
 		std::ofstream debugOut_;
 		std::vector<Template> template_;
 		std::vector<BlockInstance> blocksInstance_;

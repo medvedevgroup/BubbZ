@@ -283,21 +283,22 @@ namespace Sibelia
 		void ReportBlock(std::vector<BlockInstance> & blocksInstance, omp_lock_t & outMutex, int64_t k, std::atomic<int64_t> & blocksFound, const Instance & inst)
 		{
 			int64_t currentBlock = ++blocksFound;
-			omp_set_lock(&outMutex);
 			for (size_t l = 0; l < 2; l++)
 			{
 				auto it = inst.start[l];
 				auto jt = inst.end[l];
-				if (jt.IsPositiveStrand())
+				#pragma omp critical
 				{
-					blocksInstance.push_back(BlockInstance(+currentBlock, jt.GetChrId(), it.GetPosition(), jt.GetPosition() + k));
-				}
-				else
-				{
-					blocksInstance.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - k, it.GetPosition()));
+					if (jt.IsPositiveStrand())
+					{
+						blocksInstance.push_back(BlockInstance(+currentBlock, jt.GetChrId(), it.GetPosition(), jt.GetPosition() + k));
+					}
+					else
+					{
+						blocksInstance.push_back(BlockInstance(-currentBlock, jt.GetChrId(), jt.GetPosition() - k, it.GetPosition()));
+					}
 				}
 			}
-			omp_unset_lock(&outMutex);
 		}
 		
 	};
