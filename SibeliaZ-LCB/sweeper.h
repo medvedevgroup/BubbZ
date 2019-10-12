@@ -134,7 +134,7 @@ namespace Sibelia
 			return false;
 		}
 
-		void Sweep(JunctionStorage & storage, int64_t minBlockSize, int64_t maxBranchSize, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, omp_lock_t & outMutex)
+		void Sweep(JunctionStorage & storage, int64_t minBlockSize, int64_t maxBranchSize, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance)
 		{
 			instance_.resize(storage.GetChrNumber());
 			JunctionStorage::JunctionSequentialIterator successor[2];
@@ -206,7 +206,7 @@ namespace Sibelia
 						auto it = purge_.top();
 						if (it->Valid(minBlockSize) && !it->hasNext)
 						{
-							ReportBlock(blocksInstance, outMutex, k, blocksFound, *it);
+							ReportBlock(blocksInstance, k, blocksFound, *it);
 						}
 
 						int64_t chrId = it->start[1].GetChrId();
@@ -224,7 +224,7 @@ namespace Sibelia
 			{
 				if (purge_.top()->Valid(minBlockSize) && !purge_.top()->hasNext)
 				{
-					ReportBlock(blocksInstance, outMutex, k, blocksFound, *purge_.top());
+					ReportBlock(blocksInstance, k, blocksFound, *purge_.top());
 				}
 			}
 		}
@@ -280,7 +280,7 @@ namespace Sibelia
 			return false;
 		}
 
-		void ReportBlock(std::vector<BlockInstance> & blocksInstance, omp_lock_t & outMutex, int64_t k, std::atomic<int64_t> & blocksFound, const Instance & inst)
+		void ReportBlock(std::vector<BlockInstance> & blocksInstance, int64_t k, std::atomic<int64_t> & blocksFound, const Instance & inst)
 		{
 			int64_t currentBlock = ++blocksFound;
 			for (size_t l = 0; l < 2; l++)
