@@ -59,6 +59,11 @@ namespace Sibelia
 
 			}
 
+			int64_t Score(JunctionStorage::JunctionSequentialIterator it, JunctionStorage::JunctionSequentialIterator jt) const
+			{
+				return abs(start[0].GetPosition() - it.GetPosition()) + abs(start[1].GetPosition() - jt.GetPosition());
+			}
+
 			bool Valid(int64_t minBlockSize) const
 			{
 				for (size_t i = 0; i < 2; i++)
@@ -152,6 +157,8 @@ namespace Sibelia
 				for (JunctionStorage::JunctionIterator vit(it.GetVertexId()); vit.Valid(); ++vit)
 				{
 					bool found = false;
+					int64_t bestScore = -1;
+					std::multiset<Sweeper::Instance>::iterator bestPrev;
 					auto jt = vit.SequentialIterator();
 					if (jt != it && jt.GetChrId() >= it.GetChrId())
 					{
@@ -166,17 +173,11 @@ namespace Sibelia
 								{
 									successor[0] = it;
 									successor[1] = jt;
-									if (Compatible(*kt, successor, maxBranchSize))
+									if (Compatible(*kt, successor, maxBranchSize) && kt->Score(it, jt) > bestScore)
 									{
 										found = true;
-										Instance newUpdate(*kt);
-										newUpdate.end[0] = it;
-										newUpdate.end[1] = jt;
-										if (!InstanceFound(newUpdate, instance))
-										{
-											purge_.push(instance[chrId].insert(newUpdate));
-											(const_cast<Instance&>(*kt)).hasNext = true;
-										}
+										bestPrev = kt;
+										bestScore = kt->Score(it, jt);
 									}
 
 									if (jt.GetPosition() - kt->end[1].GetPosition() > maxBranchSize)
@@ -198,7 +199,15 @@ namespace Sibelia
 							newInstance.start[0] = newInstance.end[0] = it;
 							newInstance.start[1] = newInstance.end[1] = jt;
 							purge_.push(instance[chrId].insert(newInstance));
-						}			
+						}
+						else
+						{
+							Instance newUpdate(*bestPrev);
+							newUpdate.end[0] = it;
+							newUpdate.end[1] = jt;
+							purge_.push(instance[chrId].insert(newUpdate));
+							(const_cast<Instance&>(*bestPrev)).hasNext = true;
+						}
 					}
 				}
 

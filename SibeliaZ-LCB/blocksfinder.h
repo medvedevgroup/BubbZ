@@ -192,9 +192,7 @@ namespace Sibelia
 				}
 			}
 
-			time_t mark = time(0);
 			count_ = 0;
-			
 			time_t start = clock();
 			progressCount_ = 0;
 			currentIndex_ = 0;
