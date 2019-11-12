@@ -148,7 +148,7 @@ namespace Sibelia
 			std::vector<std::multiset<Sweeper::Instance> > & instance)
 		{
 			size_t totalErases = 0;
-			std::ofstream log(("log/" + std::to_string(start_.GetChrId())).c_str());
+		//	std::ofstream log(("log/" + std::to_string(start_.GetChrId())).c_str());
 			JunctionStorage::JunctionSequentialIterator successor[2];
 			for (auto it = start_; it.Valid(); ++it)
 			{
@@ -156,7 +156,7 @@ namespace Sibelia
 					//std::cout << instance_.size() << ' ';
 				}
 
-				log << purge_.size() << std::endl;
+		//		log << purge_.size() << std::endl;
 				for (JunctionStorage::JunctionIterator vit(it.GetVertexId()); vit.Valid(); ++vit)
 				{
 					bool found = false;
@@ -247,8 +247,6 @@ namespace Sibelia
 				int64_t chrId = purge_.top()->start[1].GetChrId();
 				instance[chrId].erase(purge_.top());
 			}
-
-			log << "E: " << totalErases << std::endl;
 		}
 
 	private:
