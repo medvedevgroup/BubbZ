@@ -122,11 +122,8 @@ namespace Sibelia
 			int32_t id;
 			uint32_t chr;
 			uint32_t idx;
-			uint32_t pos;
-			char ch;
-			char revCh;
 
-			Vertex(const TwoPaCo::JunctionPosition & junction) : id(static_cast<int32_t>(junction.GetId())), chr(junction.GetChr()), pos(junction.GetPos())
+			Vertex(const TwoPaCo::JunctionPosition & junction) : id(static_cast<int32_t>(junction.GetId()))
 			{
 
 			}
@@ -141,9 +138,8 @@ namespace Sibelia
 		{
 			int32_t id;
 			uint32_t pos;
-			bool used;
 
-			Position(const TwoPaCo::JunctionPosition & junction) : used(false)
+			Position(const TwoPaCo::JunctionPosition & junction)
 			{
 				id = static_cast<int32_t>(junction.GetId());
 				pos = junction.GetPos();
@@ -267,33 +263,6 @@ namespace Sibelia
 				return idx_ >= 0 && size_t(idx_) < JunctionStorage::this_->position_[GetChrId()].size();
 			}
 
-			bool IsUsed() const
-			{
-				if (IsPositiveStrand())
-				{
-					return JunctionStorage::this_->position_[GetChrId()][idx_].used;
-				}
-
-				if (idx_ > 0)
-				{
-					return JunctionStorage::this_->position_[GetChrId()][idx_ - 1].used;
-				}
-
-				return false;
-			}
-
-			void MarkUsed() const
-			{
-				if (IsPositiveStrand())
-				{
-					JunctionStorage::this_->position_[GetChrId()][idx_].used = true;
-				}
-				else if (idx_ > 0)
-				{
-					JunctionStorage::this_->position_[GetChrId()][idx_ - 1].used = true;
-				}
-			}
-
 			JunctionSequentialIterator& operator++ ()
 			{
 				Inc();
@@ -413,21 +382,6 @@ namespace Sibelia
 			int64_t GetVertexId() const
 			{
 				return vid_;
-			}
-
-			int64_t GetPosition() const
-			{
-				return JunctionStorage::this_->vertex_[abs(vid_)][iidx_].pos;
-			}
-
-			char GetChar() const
-			{
-				if (IsPositiveStrand())
-				{
-					return JunctionStorage::this_->vertex_[abs(vid_)][iidx_].ch;
-				}
-
-				return JunctionStorage::this_->vertex_[abs(vid_)][iidx_].revCh;
 			}
 
 			JunctionSequentialIterator SequentialIterator() const
@@ -593,7 +547,6 @@ namespace Sibelia
 				}
 			}
 
-
 			{
 				size_t chr = 0;
 				uint32_t idx = 0;
@@ -612,10 +565,10 @@ namespace Sibelia
 						position_[junction.GetChr()].push_back(Position(junction));
 						vertex_[absId].push_back(Vertex(junction));
 						vertex_[absId].back().idx = idx++;
+						vertex_[absId].back().chr = chr;
 					}
 				}
 			}
-
 
 			size_t record = 0;
 			sequence_.resize(position_.size());
@@ -629,17 +582,6 @@ namespace Sibelia
 					{
 						sequence_[record].push_back(ch);
 					}
-				}
-			}
-
-			for (size_t i = 0; i < vertex_.size(); i++)
-			{
-				for (size_t j = 0; j < vertex_[i].size(); j++)
-				{
-					int64_t chr = vertex_[i][j].chr;
-					int64_t pos_ = vertex_[i][j].pos;
-					vertex_[i][j].ch = sequence_[chr][pos_ + JunctionStorage::this_->k_];
-					vertex_[i][j].revCh = pos_ > 0 ? TwoPaCo::DnaChar::ReverseChar(sequence_[chr][pos_ - 1]) : 'N';
 				}
 			}
 

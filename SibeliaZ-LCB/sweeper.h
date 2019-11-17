@@ -50,11 +50,12 @@ namespace Sibelia
 
 		struct Instance
 		{
+			int score;
 			bool hasNext;
 			JunctionStorage::JunctionSequentialIterator start[2];
 			JunctionStorage::JunctionSequentialIterator end[2];
 
-			Instance(): hasNext(false)
+			Instance(): hasNext(false), score(1)
 			{
 
 			}
@@ -125,20 +126,6 @@ namespace Sibelia
 
 		}
 
-		bool InstanceFound(const Instance & newInstance, std::vector<std::multiset<Sweeper::Instance> > & instance)
-		{
-			auto er = instance[newInstance.start[1].GetChrId()].equal_range(newInstance);
-			for (auto it = er.first; it != er.second; ++it)
-			{
-				if (*it == newInstance)
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}
-
 		void Sweep(JunctionStorage & storage,
 			int64_t minBlockSize,
 			int64_t maxBranchSize,
@@ -148,15 +135,9 @@ namespace Sibelia
 			std::vector<std::multiset<Sweeper::Instance> > & instance)
 		{
 			size_t totalErases = 0;
-		//	std::ofstream log(("log/" + std::to_string(start_.GetChrId())).c_str());
 			JunctionStorage::JunctionSequentialIterator successor[2];
 			for (auto it = start_; it.Valid(); ++it)
 			{
-				{
-					//std::cout << instance_.size() << ' ';
-				}
-
-		//		log << purge_.size() << std::endl;
 				for (JunctionStorage::JunctionIterator vit(it.GetVertexId()); vit.Valid(); ++vit)
 				{
 					bool found = false;
@@ -176,11 +157,15 @@ namespace Sibelia
 								{
 									successor[0] = it;
 									successor[1] = jt;
-									if (Compatible(*kt, successor, maxBranchSize) && kt->Score(it, jt) > bestScore)
+									if (Compatible(*kt, successor, maxBranchSize))
 									{
-										found = true;
-										bestPrev = kt;
-										bestScore = kt->Score(it, jt);
+										const_cast<Instance&>(*kt).hasNext = true;
+										if (kt->score > bestScore)
+										{
+											found = true;
+											bestPrev = kt;
+											bestScore = kt->score;
+										}
 									}
 
 									if (jt.GetPosition() - kt->end[1].GetPosition() > maxBranchSize)
@@ -206,10 +191,11 @@ namespace Sibelia
 						else
 						{
 							Instance newUpdate(*bestPrev);
+							newUpdate.hasNext = false;
 							newUpdate.end[0] = it;
 							newUpdate.end[1] = jt;
+							newUpdate.score += 1;
 							purge_.push(instance[chrId].insert(newUpdate));
-							(const_cast<Instance&>(*bestPrev)).hasNext = true;
 						}
 					}
 				}
@@ -228,7 +214,6 @@ namespace Sibelia
 						int64_t chrId = it->start[1].GetChrId();
 						purge_.pop();
 						instance[chrId].erase(it);
-						totalErases++;
 					}
 					else
 					{
