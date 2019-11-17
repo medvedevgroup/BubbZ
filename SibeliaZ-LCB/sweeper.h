@@ -2,6 +2,7 @@
 #define _SWEEPER_H_
 
 #include <set>
+#include <deque>
 #include <queue>
 #include <cassert>
 #include <algorithm>
@@ -188,7 +189,7 @@ namespace Sibelia
 							Instance newInstance;
 							newInstance.start[0] = newInstance.end[0] = it;
 							newInstance.start[1] = newInstance.end[1] = jt;
-							purge_.push(instance[chrId].insert(newInstance));
+							purge_.push_back(instance[chrId].insert(newInstance));
 						}
 						else
 						{
@@ -197,24 +198,24 @@ namespace Sibelia
 							newUpdate.end[0] = it;
 							newUpdate.end[1] = jt;
 							newUpdate.score += 1;
-							purge_.push(instance[chrId].insert(newUpdate));
+							purge_.push_back(instance[chrId].insert(newUpdate));
 						}
 					}
 				}
 
 				while (purge_.size() > 0)
 				{
-					int64_t diff = it.GetPosition() - (purge_.top())->end[0].GetPosition();
+					int64_t diff = it.GetPosition() - (purge_.front())->end[0].GetPosition();
 					if (diff >= maxBranchSize)
 					{
-						auto it = purge_.top();
+						auto it = purge_.front();
 						if (it->Valid(minBlockSize) && !it->hasNext)
 						{
 							ReportBlock(blocksInstance, k, blocksFound, *it);
 						}
 
 						int64_t chrId = it->start[1].GetChrId();
-						purge_.pop();
+						purge_.pop_front();
 						instance[chrId].erase(it);
 					}
 					else
@@ -224,15 +225,15 @@ namespace Sibelia
 				}
 			}
 
-			for(;purge_.size() > 0; purge_.pop())
+			for(;purge_.size() > 0; purge_.pop_back())
 			{
-				if (purge_.top()->Valid(minBlockSize) && !purge_.top()->hasNext)
+				if (purge_.back()->Valid(minBlockSize) && !purge_.back()->hasNext)
 				{
-					ReportBlock(blocksInstance, k, blocksFound, *purge_.top());
+					ReportBlock(blocksInstance, k, blocksFound, *purge_.back());
 				}
 
-				int64_t chrId = purge_.top()->start[1].GetChrId();
-				instance[chrId].erase(purge_.top());
+				int64_t chrId = purge_.back()->start[1].GetChrId();
+				instance[chrId].erase(purge_.back());
 			}
 		}
 
@@ -246,7 +247,7 @@ namespace Sibelia
 			}
 		};
 
-		std::priority_queue<InstanceIt, std::vector<InstanceIt>, IteratorCmp> purge_;
+		std::deque<InstanceIt> purge_;
 		JunctionStorage::JunctionSequentialIterator start_;
 
 		bool Compatible(const Instance & inst, const JunctionStorage::JunctionSequentialIterator succ[2], int64_t maxBranchSize) const
