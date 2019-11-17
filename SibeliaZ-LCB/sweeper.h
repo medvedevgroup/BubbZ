@@ -168,6 +168,8 @@ namespace Sibelia
 										}
 									}
 
+									break;
+
 									if (jt.GetPosition() - kt->end[1].GetPosition() > maxBranchSize)
 									{
 										break;
