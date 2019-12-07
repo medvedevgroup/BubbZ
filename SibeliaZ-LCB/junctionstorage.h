@@ -172,9 +172,10 @@ namespace Sibelia
 			int64_t GetPosition() const
 			{
 				if (IsPositiveStrand())
-				{
+				{				
+
 					return JunctionStorage::this_->position_[GetChrId()][idx_].pos;
-				}
+				}				
 
 				return JunctionStorage::this_->position_[GetChrId()][idx_].pos + JunctionStorage::this_->k_;
 			}
