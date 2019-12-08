@@ -114,12 +114,7 @@ namespace Sibelia
 					return IsPositiveStrand() < cmp.IsPositiveStrand();
 				}
 
-				if (endIdx[1] > 0)
-				{
-					return endIdx[1] < cmp.endIdx[1];
-				}
-
-				return endIdx[1] > cmp.endIdx[1];
+				return endIdx[1] < cmp.endIdx[1];
 			}
 
 			JunctionStorage::JunctionSequentialIterator End(const JunctionStorage & storage, size_t chrId, size_t idx) const
@@ -193,7 +188,7 @@ namespace Sibelia
 					}
 					
 					purge_.pop_front();
-					instance[chrId].erase(it);
+					instance[abs(chrId)].erase(it);
 				}
 				else
 				{
@@ -226,7 +221,7 @@ namespace Sibelia
 						if (kt != instance[chrId].begin())
 						{
 							if ((--kt)->IsPositiveStrand() == jt.IsPositiveStrand())
-							{
+							{							
 								successor[0] = it;							
 								successor[1] = jt;
 								if (Compatible(storage, *kt, chrId, successor, maxBranchSize))
@@ -273,15 +268,16 @@ namespace Sibelia
 			int64_t chrId0 = start_.GetChrId();
 			JunctionStorage::JunctionSequentialIterator end[2] = { inst.End(storage, chrId0, 0), inst.End(storage, chrId1, 1) };
 			bool validSuccessor = end[0].GetChar() == end[1].GetChar();
+
 			for (size_t i = 0; i < 2; i++)
 			{
 				if (end[i] + 1 != succ[i])
-				{
+				{					
 					validSuccessor = false;
 				}
 
 				if (abs(end[i].GetPosition() - succ[i].GetPosition()) >= maxBranchSize)
-				{
+				{					
 					withinBubble = false;
 				}
 			}
@@ -296,7 +292,7 @@ namespace Sibelia
 					size_t startIdx2 = min(start[1].GetIndex(), succ[1].GetIndex());
 					size_t endIdx2 = max(start[1].GetIndex(), succ[1].GetIndex());
 					if ((startIdx2 >= startIdx1 && startIdx2 <= endIdx1) || (startIdx1 >= startIdx2 && startIdx1 <= endIdx2))
-					{
+					{					
 						return false;
 					}
 				}
