@@ -166,7 +166,11 @@ namespace Sibelia
 				return !(*this == cmp);
 			}
 
+			std::list<std::pair<int64_t, std::multiset<Instance>::iterator> >::iterator copy;
 		};
+
+		typedef std::multiset<Instance>::iterator InstanceIt;
+
 
 		Sweeper(JunctionStorage::JunctionSequentialIterator start) : start_(start)
 		{
@@ -237,7 +241,9 @@ namespace Sibelia
 
 						if (!found)
 						{
-							purge_.push_back(std::make_pair(chrId, instance[chrId].insert(Instance(it, jt))));
+							auto lt = instance[chrId].insert(Instance(it, jt));
+							purge_.push_back(std::make_pair(chrId, lt));
+							const_cast<Instance&>(*lt).copy = --purge_.end();
 						}
 						else
 						{
@@ -245,7 +251,11 @@ namespace Sibelia
 							newUpdate.hasNext = false;
 							newUpdate.endIdx[0] = newUpdate.GetIdx(it);
 							newUpdate.endIdx[1] = newUpdate.GetIdx(jt);
-							purge_.push_back(std::make_pair(chrId, instance[chrId].insert(newUpdate)));
+							purge_.erase(bestPrev.copy);
+							instance[chrId].erase(bestPrev);
+							auto lt = instance[chrId].insert(newUpdate);
+							purge_.push_back(std::make_pair(chrId, lt));
+							const_cast<Instance&>(*lt).copy = --purge_.end();
 						}
 					}
 				}
@@ -257,9 +267,8 @@ namespace Sibelia
 		}
 
 	private:
-		typedef std::multiset<Instance>::iterator InstanceIt;
 		
-		std::deque<std::pair<int64_t, InstanceIt> > purge_;
+		std::list<std::pair<int64_t, InstanceIt> > purge_;
 		JunctionStorage::JunctionSequentialIterator start_;
 
 		bool Compatible(const JunctionStorage & storage, const Instance & inst, int64_t chrId1, const JunctionStorage::JunctionSequentialIterator succ[2], int64_t maxBranchSize) const
