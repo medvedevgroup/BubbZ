@@ -18,101 +18,7 @@ namespace Sibelia
 	using std::min;
 	using std::max;
 
-	class Edge
-	{
-	public:
-		Edge() : startVertex_(INT64_MAX), endVertex_(INT64_MAX) {}
-
-		Edge(int64_t startVertex, int64_t endVertex, char ch, char revCh, int64_t length, int64_t capacity) :
-			startVertex_(startVertex), endVertex_(endVertex), ch_(ch), revCh_(revCh), length_(length), capacity_(capacity)
-		{
-
-		}
-
-		int64_t GetStartVertex() const
-		{
-			return startVertex_;
-		}
-
-		int64_t GetEndVertex() const
-		{
-			return endVertex_;
-		}
-
-		char GetChar() const
-		{
-			return ch_;
-		}
-
-		int64_t GetLength() const
-		{
-			return length_;
-		}
-
-		int64_t GetCapacity() const
-		{
-			return capacity_;
-		}
-
-		Edge Reverse() const
-		{
-			return Edge(-endVertex_, -startVertex_, revCh_, ch_, length_, capacity_);
-		}
-
-		char GetRevChar() const
-		{
-			return revCh_;
-		}
-
-		bool operator < (const Edge & e) const
-		{
-			if (startVertex_ != e.startVertex_)
-			{
-				return startVertex_ < e.startVertex_;
-			}
-
-			if (endVertex_ != e.endVertex_)
-			{
-				return endVertex_ < e.endVertex_;
-			}
-
-			if (ch_ != e.ch_)
-			{
-				return ch_ < e.ch_;
-			}
-
-			return false;
-		}
-
-		bool Valid() const
-		{
-			return startVertex_ != INT64_MAX;
-		}
-
-		bool operator == (const Edge & e) const
-		{
-			return startVertex_ == e.startVertex_ && endVertex_ == e.endVertex_ && ch_ == e.ch_;
-		}
-
-		bool operator != (const Edge & e) const
-		{
-			return !(*this == e);
-		}
-
-		void Inc()
-		{
-			capacity_++;
-		}
-
-	private:
-		int64_t startVertex_;
-		int64_t endVertex_;
-		int64_t length_;
-		int64_t capacity_;
-		char ch_;
-		char revCh_;
-	};
-
+	
 	class JunctionStorage
 	{
 	private:
@@ -185,43 +91,6 @@ namespace Sibelia
 				return JunctionStorage::this_->position_[GetChrId()][idx_].pos;
 			}
 
-			Edge OutgoingEdge() const
-			{
-				const Position & now = JunctionStorage::this_->position_[GetChrId()][idx_];
-				if (IsPositiveStrand())
-				{
-					const Position & next = JunctionStorage::this_->position_[GetChrId()][idx_ + 1];
-					char ch = JunctionStorage::this_->sequence_[GetChrId()][now.pos + JunctionStorage::this_->k_];
-					char revCh = TwoPaCo::DnaChar::ReverseChar(JunctionStorage::this_->sequence_[GetChrId()][next.pos - 1]);
-					return Edge(now.id, next.id, ch, revCh, next.pos - now.pos, 1);
-				}
-				else
-				{
-					const Position & next = JunctionStorage::this_->position_[GetChrId()][idx_ - 1];
-					char ch = TwoPaCo::DnaChar::ReverseChar(JunctionStorage::this_->sequence_[GetChrId()][now.pos - 1]);
-					char revCh = JunctionStorage::this_->sequence_[GetChrId()][now.pos + JunctionStorage::this_->k_];
-					return Edge(-now.id, -next.id, ch, revCh, now.pos - next.pos, 1);
-				}
-			}
-
-			Edge IngoingEdge() const
-			{
-				const Position & now = JunctionStorage::this_->position_[GetChrId()][idx_];
-				if (IsPositiveStrand())
-				{
-					const Position & prev = JunctionStorage::this_->position_[GetChrId()][idx_ - 1];
-					char ch = JunctionStorage::this_->sequence_[GetChrId()][prev.pos + JunctionStorage::this_->k_];
-					char revCh = TwoPaCo::DnaChar::ReverseChar(JunctionStorage::this_->sequence_[GetChrId()][now.pos - 1]);
-					return Edge(prev.id, now.id, ch, revCh, now.pos - prev.pos, 1);
-				}
-				else
-				{
-					const Position & prev = JunctionStorage::this_->position_[GetChrId()][idx_ + 1];
-					char ch = TwoPaCo::DnaChar::ReverseChar(JunctionStorage::this_->sequence_[GetChrId()][prev.pos - 1]);
-					char revCh = JunctionStorage::this_->sequence_[GetChrId()][now.pos + JunctionStorage::this_->k_];
-					return Edge(-prev.id, -now.id, ch, revCh, prev.pos - now.pos, 1);
-				}
-			}
 
 			JunctionSequentialIterator Reverse()
 			{
@@ -598,15 +467,6 @@ namespace Sibelia
 			Init(fileName, genomesFileName, threads, abundanceThreshold, loopThreshold);
 		}
 
-		bool IsSequencePresent(const std::string & str) const
-		{
-			return sequenceId_.count(str) > 0;
-		}
-
-		size_t GetSequenceId(const std::string & str) const
-		{
-			return sequenceId_.find(str)->second;
-		}
 
 
 	private:

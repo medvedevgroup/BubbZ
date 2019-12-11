@@ -251,8 +251,10 @@ namespace Sibelia
 							newUpdate.hasNext = false;
 							newUpdate.endIdx[0] = newUpdate.GetIdx(it);
 							newUpdate.endIdx[1] = newUpdate.GetIdx(jt);
+
 							purge_.erase(bestPrev.copy);
-							instance[chrId].erase(bestPrev);
+							instance[chrId].erase(kt);
+
 							auto lt = instance[chrId].insert(newUpdate);
 							purge_.push_back(std::make_pair(chrId, lt));
 							const_cast<Instance&>(*lt).copy = --purge_.end();
