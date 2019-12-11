@@ -179,19 +179,6 @@ namespace Sibelia
 
 			using namespace std::placeholders;
 
-			std::vector<int64_t> shuffle;
-			for (int64_t v = -storage_.GetVerticesNumber() + 1; v < storage_.GetVerticesNumber(); v++)
-			{
-				for (JunctionStorage::JunctionIterator it(v); it.Valid(); ++it)
-				{
-					if (it.IsPositiveStrand())
-					{
-						shuffle.push_back(v);
-						break;
-					}
-				}
-			}
-
 			count_ = 0;
 			time_t start = clock();
 			progressCount_ = 0;
@@ -242,7 +229,8 @@ namespace Sibelia
 
 					if (go)
 					{
-						Sweeper sweeper(finder.storage_.Begin(nowChr));
+						auto it = JunctionStorage::Iterator(nowChr);
+						Sweeper sweeper(it);
 						sweeper.Sweep(finder.storage_, finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.workInstance_[omp_get_thread_num()], instance);
 						{
 							std::cout << ++finder.progressCount_ << ' ' << finder.storage_.GetChrNumber() << std::endl;

@@ -13,10 +13,6 @@
 
 namespace Sibelia
 {
-	typedef std::pair<JunctionStorage::JunctionSequentialIterator, JunctionStorage::JunctionSequentialIterator> Template;
-
-	bool operator < (const Template & a, const Template & b);
-	
 
 	class BlockInstance
 	{
@@ -78,10 +74,10 @@ namespace Sibelia
 
 			int32_t MainPosition(size_t chrId, const JunctionStorage & storage) const
 			{
-				return storage.GetIterator(chrId, endIdx[0] - 1).GetPosition();
+				return JunctionStorage::Iterator(chrId, endIdx[0] - 1).GetPosition();
 			}
 
-			static int32_t GetIdx(JunctionStorage::JunctionSequentialIterator & dummy)
+			static int32_t GetIdx(JunctionStorage::Iterator & dummy)
 			{
 				if (dummy.IsPositiveStrand())
 				{
@@ -91,13 +87,13 @@ namespace Sibelia
 				return -(int32_t(dummy.GetIndex()) + 1);
 			}
 
-			Instance(JunctionStorage::JunctionSequentialIterator & main, JunctionStorage::JunctionSequentialIterator & secondary)
+			Instance(JunctionStorage::Iterator & main, JunctionStorage::Iterator & secondary)
 			{
 				startIdx[0] = endIdx[0] = GetIdx(main);
 				startIdx[1] = endIdx[1] = GetIdx(secondary);
 			}
 
-			Instance(JunctionStorage::JunctionSequentialIterator & dummy)
+			Instance(JunctionStorage::Iterator & dummy)
 			{
 				endIdx[1] = GetIdx(dummy);
 			}
@@ -117,34 +113,34 @@ namespace Sibelia
 				return endIdx[1] < cmp.endIdx[1];
 			}
 
-			JunctionStorage::JunctionSequentialIterator End(const JunctionStorage & storage, size_t chrId, size_t idx) const
+			JunctionStorage::Iterator End(const JunctionStorage & storage, size_t chrId, size_t idx) const
 			{
 				if (idx == 0)
 				{
-					return storage.GetIterator(chrId, endIdx[0] - 1);
+					return JunctionStorage::Iterator(chrId, endIdx[0] - 1);
 				}
 
 				if (IsPositiveStrand())
 				{
-					return storage.GetIterator(chrId, endIdx[1] - 1);
+					return JunctionStorage::Iterator(chrId, endIdx[1] - 1);
 				}
 
-				return storage.GetIterator(chrId, -endIdx[1] - 1, false);
+				return JunctionStorage::Iterator(chrId, -endIdx[1] - 1, false);
 			}
 
-			JunctionStorage::JunctionSequentialIterator Start(const JunctionStorage & storage, size_t chrId, size_t idx) const
+			JunctionStorage::Iterator Start(const JunctionStorage & storage, size_t chrId, size_t idx) const
 			{
 				if (idx == 0)
 				{
-					return storage.GetIterator(chrId, startIdx[0] - 1);
+					return JunctionStorage::Iterator(chrId, startIdx[0] - 1);
 				}
 
 				if (IsPositiveStrand())
 				{
-					return storage.GetIterator(chrId, startIdx[1] - 1);
+					return JunctionStorage::Iterator(chrId, startIdx[1] - 1);
 				}
 
-				return storage.GetIterator(chrId, -startIdx[1] - 1, false);
+				return JunctionStorage::Iterator(chrId, -startIdx[1] - 1, false);
 			}
 
 
@@ -171,8 +167,7 @@ namespace Sibelia
 
 		typedef std::multiset<Instance>::iterator InstanceIt;
 
-
-		Sweeper(JunctionStorage::JunctionSequentialIterator start) : start_(start)
+		Sweeper(JunctionStorage::Iterator start) : start_(start)
 		{
 
 		}
@@ -209,56 +204,55 @@ namespace Sibelia
 			std::vector<BlockInstance> & blocksInstance,
 			std::vector<std::multiset<Sweeper::Instance> > & instance)
 		{
-			size_t totalErases = 0;
-			JunctionStorage::JunctionSequentialIterator successor[2];
-			for (auto it = start_; it.Valid(); ++it)
+			JunctionStorage::Iterator successor[2];
+			for (auto it = start_; it.Valid(); it.Inc())
 			{
-				for (JunctionStorage::JunctionIterator vit(it.GetVertexId()); vit.Valid(); ++vit)
+				for (auto jt = it.Next(); jt.Valid(); jt = jt.Next())
 				{
 					Instance bestPrev;
 					bool found = false;
-					auto jt = vit.SequentialIterator();
-					if (jt != it && jt.GetChrId() >= it.GetChrId())
+					int64_t chrId = jt.GetChrId();
+					auto kt = instance[chrId].upper_bound(Instance(jt));
+					if (kt != instance[chrId].begin())
 					{
-						int64_t chrId = jt.GetChrId();
-						auto kt = instance[chrId].upper_bound(Instance(jt));
-						if (kt != instance[chrId].begin())
-						{
-							if ((--kt)->IsPositiveStrand() == jt.IsPositiveStrand())
-							{							
-								successor[0] = it;							
-								successor[1] = jt;
-								if (Compatible(storage, *kt, chrId, successor, maxBranchSize))
+						--kt;
+						bool b1 = (kt)->IsPositiveStrand();
+						bool b2 = jt.IsPositiveStrand();
+						bool c = b1 == b2;
+						if ((kt)->IsPositiveStrand() == jt.IsPositiveStrand())
+						{							
+							successor[0] = it;							
+							successor[1] = jt;
+							if (Compatible(storage, *kt, chrId, successor, maxBranchSize))
+							{
+								const_cast<Instance&>(*kt).hasNext = true;
 								{
-									const_cast<Instance&>(*kt).hasNext = true;
-									{
-										bestPrev = *kt;
-										found = true;
-									}
+									bestPrev = *kt;
+									found = true;
 								}
 							}
 						}
+					}
 
-						if (!found)
-						{
-							auto lt = instance[chrId].insert(Instance(it, jt));
-							purge_.push_back(std::make_pair(chrId, lt));
-							const_cast<Instance&>(*lt).copy = --purge_.end();
-						}
-						else
-						{
-							Instance newUpdate(bestPrev);
-							newUpdate.hasNext = false;
-							newUpdate.endIdx[0] = newUpdate.GetIdx(it);
-							newUpdate.endIdx[1] = newUpdate.GetIdx(jt);
+					if (!found)
+					{
+						auto lt = instance[chrId].insert(Instance(it, jt));
+						purge_.push_back(std::make_pair(chrId, lt));
+						const_cast<Instance&>(*lt).copy = --purge_.end();
+					}
+					else
+					{
+						Instance newUpdate(bestPrev);
+						newUpdate.hasNext = false;
+						newUpdate.endIdx[0] = newUpdate.GetIdx(it);
+						newUpdate.endIdx[1] = newUpdate.GetIdx(jt);
 
-							purge_.erase(bestPrev.copy);
-							instance[chrId].erase(kt);
+						purge_.erase(bestPrev.copy);
+						instance[chrId].erase(kt);
 
-							auto lt = instance[chrId].insert(newUpdate);
-							purge_.push_back(std::make_pair(chrId, lt));
-							const_cast<Instance&>(*lt).copy = --purge_.end();
-						}
+						auto lt = instance[chrId].insert(newUpdate);
+						purge_.push_back(std::make_pair(chrId, lt));
+						const_cast<Instance&>(*lt).copy = --purge_.end();
 					}
 				}
 
@@ -271,18 +265,20 @@ namespace Sibelia
 	private:
 		
 		std::list<std::pair<int64_t, InstanceIt> > purge_;
-		JunctionStorage::JunctionSequentialIterator start_;
+		JunctionStorage::Iterator start_;
 
-		bool Compatible(const JunctionStorage & storage, const Instance & inst, int64_t chrId1, const JunctionStorage::JunctionSequentialIterator succ[2], int64_t maxBranchSize) const
+		bool Compatible(const JunctionStorage & storage, const Instance & inst, int64_t chrId1, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{
 			bool withinBubble = true;
 			int64_t chrId0 = start_.GetChrId();
-			JunctionStorage::JunctionSequentialIterator end[2] = { inst.End(storage, chrId0, 0), inst.End(storage, chrId1, 1) };
+			JunctionStorage::Iterator end[2] = { inst.End(storage, chrId0, 0), inst.End(storage, chrId1, 1) };
 			bool validSuccessor = end[0].GetChar() == end[1].GetChar();
 
 			for (size_t i = 0; i < 2; i++)
 			{
-				if (end[i] + 1 != succ[i])
+				auto afterEnd = end[i];
+				end[i].Inc();
+				if (afterEnd != succ[i])
 				{					
 					validSuccessor = false;
 				}
@@ -295,7 +291,7 @@ namespace Sibelia
 
 			if (withinBubble || validSuccessor)
 			{
-				JunctionStorage::JunctionSequentialIterator start[2] = { inst.Start(storage, chrId0, 0), inst.Start(storage, chrId1, 1) };
+				JunctionStorage::Iterator start[2] = { inst.Start(storage, chrId0, 0), inst.Start(storage, chrId1, 1) };
 				if(start[0].GetChrId() == start[1].GetChrId())
 				{
 					size_t startIdx1 = start[0].GetIndex();
