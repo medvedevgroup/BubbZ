@@ -49,8 +49,9 @@ namespace Sibelia
 		{
 			//int score;
 			bool hasNext;
-			int32_t startIdx[2];
 			int32_t endIdx[2];
+			int32_t startIdx[2];
+			std::list<std::pair<int64_t, std::multiset<Instance>::iterator> >::iterator copy;
 
 			Instance(): hasNext(false)//, score(1)
 			{
@@ -161,8 +162,6 @@ namespace Sibelia
 			{
 				return !(*this == cmp);
 			}
-
-			std::list<std::pair<int64_t, std::multiset<Instance>::iterator> >::iterator copy;
 		};
 
 		typedef std::multiset<Instance>::iterator InstanceIt;
@@ -216,9 +215,6 @@ namespace Sibelia
 					if (kt != instance[chrId].begin())
 					{
 						--kt;
-						bool b1 = (kt)->IsPositiveStrand();
-						bool b2 = jt.IsPositiveStrand();
-						bool c = b1 == b2;
 						if ((kt)->IsPositiveStrand() == jt.IsPositiveStrand())
 						{							
 							successor[0] = it;							

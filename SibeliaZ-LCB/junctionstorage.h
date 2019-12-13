@@ -196,28 +196,6 @@ namespace Sibelia
 				}
 			}
 			
-			std::vector<PrevPosition> prevPos(abundance.size());
-			TwoPaCo::JunctionPositionReader reader(inFileName);
-			for (TwoPaCo::JunctionPosition junction; reader.NextJunctionPosition(junction);)
-			{
-				size_t absId = abs(junction.GetId());
-				if (abundance[absId] < size_t(abundanceThreshold))
-				{
-					position_[junction.GetChr()].push_back(Position(junction));
-					if (prevPos[absId].prevId != 0)
-					{
-						auto & prev = prevPos[absId];
-						position_[prev.prevChr][prev.prevIdx].nextChr = junction.GetChr();
-						position_[prev.prevChr][prev.prevIdx].invert = prev.prevId != junction.GetId();
-						position_[prev.prevChr][prev.prevIdx].nextIdx = position_[junction.GetChr()].size() - 1;
-					}
-
-					prevPos[absId].prevId = junction.GetId();
-					prevPos[absId].prevChr = junction.GetChr();
-					prevPos[absId].prevIdx = position_[junction.GetChr()].size() - 1;
-				}
-			}
-
 			size_t record = 0;
 			sequence_.resize(position_.size());
 			for (const auto & fastaFileName : genomesFileName)
@@ -233,16 +211,31 @@ namespace Sibelia
 				}
 			}
 
-			for (size_t chr = 0; chr < position_.size(); chr++)
+			std::vector<PrevPosition> prevPos(abundance.size());
+			TwoPaCo::JunctionPositionReader reader(inFileName);
+			for (TwoPaCo::JunctionPosition junction; reader.NextJunctionPosition(junction);)
 			{
-				for (size_t idx = 0; idx < position_[chr].size(); idx++)
+				size_t absId = abs(junction.GetId());
+				if (abundance[absId] < size_t(abundanceThreshold))
 				{
-					auto pos_ = position_[chr][idx].pos;
-					position_[chr][idx].ch = sequence_[chr][pos_ + JunctionStorage::this_->k_];
-					position_[chr][idx].revCh = pos_ > 0 ? TwoPaCo::DnaChar::ReverseChar(sequence_[chr][pos_ - 1]) : 'N';
+					auto chr = junction.GetChr();
+					auto pos = junction.GetPos();
+					position_[chr].push_back(Position(junction));
+					position_[chr].back().ch = sequence_[chr][pos + JunctionStorage::this_->k_];
+					position_[chr].back().revCh = pos > 0 ? TwoPaCo::DnaChar::ReverseChar(sequence_[chr][pos - 1]) : 'N';
+					if (prevPos[absId].prevId != 0)
+					{
+						auto & prev = prevPos[absId];
+						position_[prev.prevChr][prev.prevIdx].nextChr = junction.GetChr();
+						position_[prev.prevChr][prev.prevIdx].invert = prev.prevId != junction.GetId();
+						position_[prev.prevChr][prev.prevIdx].nextIdx = position_[junction.GetChr()].size() - 1;
+					}
+
+					prevPos[absId].prevId = junction.GetId();
+					prevPos[absId].prevChr = junction.GetChr();
+					prevPos[absId].prevIdx = position_[junction.GetChr()].size() - 1;
 				}
 			}
-
 		}
 
 		JunctionStorage() {}
