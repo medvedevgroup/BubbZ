@@ -51,7 +51,6 @@ namespace Sibelia
 			bool hasNext;
 			int32_t endIdx[2];
 			int32_t startIdx[2];
-			std::list<std::pair<int64_t, std::multiset<Instance>::iterator> >::iterator copy;
 
 			Instance(): hasNext(false)//, score(1)
 			{
@@ -234,7 +233,6 @@ namespace Sibelia
 					{
 						auto lt = instance[chrId].insert(Instance(it, jt));
 						purge_.push_back(std::make_pair(chrId, lt));
-						const_cast<Instance&>(*lt).copy = --purge_.end();
 					}
 					else
 					{
@@ -242,13 +240,8 @@ namespace Sibelia
 						newUpdate.hasNext = false;
 						newUpdate.endIdx[0] = newUpdate.GetIdx(it);
 						newUpdate.endIdx[1] = newUpdate.GetIdx(jt);
-
-						purge_.erase(bestPrev.copy);
-						instance[chrId].erase(kt);
-
 						auto lt = instance[chrId].insert(newUpdate);
 						purge_.push_back(std::make_pair(chrId, lt));
-						const_cast<Instance&>(*lt).copy = --purge_.end();
 					}
 				}
 
@@ -260,7 +253,7 @@ namespace Sibelia
 
 	private:
 		
-		std::list<std::pair<int64_t, InstanceIt> > purge_;
+		std::deque<std::pair<int64_t, InstanceIt> > purge_;
 		JunctionStorage::Iterator start_;
 
 		bool Compatible(const JunctionStorage & storage, const Instance & inst, int64_t chrId1, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
