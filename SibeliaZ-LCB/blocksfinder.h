@@ -210,7 +210,7 @@ namespace Sibelia
 
 			void operator()() const
 			{
-				std::vector<std::multiset<Sweeper::Instance> > instance(finder.storage_.GetChrNumber());
+				std::vector<std::vector<std::multiset<Sweeper::Instance> > > instance(2, std::vector<std::multiset<Sweeper::Instance> >(finder.storage_.GetChrNumber()));
 				size_t endIndex = finder.storage_.GetChrNumber();
 				for(bool go = true; go;)
 				{

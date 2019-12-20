@@ -77,6 +77,16 @@ namespace Sibelia
 				return JunctionStorage::Iterator(chrId, endIdx[0] - 1).GetPosition();
 			}
 
+			int32_t SecondPosition(size_t chrId, const JunctionStorage & storage) const
+			{
+				if (IsPositiveStrand())
+				{
+					return JunctionStorage::Iterator(chrId, endIdx[1] - 1).GetPosition();
+				}
+
+				return -JunctionStorage::Iterator(chrId, -endIdx[1] - 1).GetPosition();
+			}
+
 			static int32_t GetIdx(JunctionStorage::Iterator & dummy)
 			{
 				if (dummy.IsPositiveStrand())
@@ -170,22 +180,40 @@ namespace Sibelia
 
 		}
 
-		void Purge(int32_t lastPos, const JunctionStorage & storage, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, int32_t minBlockSize, int32_t maxBranchSize, std::vector<std::multiset<Sweeper::Instance> > & instance)
+		void Purge(int32_t lastPos, const JunctionStorage & storage, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, int32_t minBlockSize, int32_t maxBranchSize, std::vector<std::vector<std::multiset<Sweeper::Instance> > > & instance)
 		{
 			while (purge_.size() > 0)
 			{
-				int64_t chrId = purge_.front().first;
+				int64_t chrId = abs(purge_.front().first) - 1;
+				size_t strand = purge_.front().first > 0 ? 0 : 1;
 				int32_t diff = lastPos - (purge_.front().second->MainPosition(start_.GetChrId(), storage));
 				if (diff >= maxBranchSize)
 				{
 					auto it = purge_.front().second;
-					if (it->Valid(storage, minBlockSize, start_.GetChrId(), chrId) && !it->hasNext)
+					bool hasNext = it->hasNext;
+					/*
+					if (!hasNext)
+					{
+						auto & nowInstance = *purge_.front().second;
+						auto nextIt = --instance[chrId].upper_bound(nowInstance);
+						if (nowInstance.IsPositiveStrand() == nextIt->IsPositiveStrand() && nowInstance != *nextIt)
+						{
+							auto nowPos = nowInstance.SecondPosition(chrId, storage);
+							auto nextPos = nowInstance.SecondPosition(chrId, storage);
+							if (nextPos >= nowPos && nextPos - nowPos <= maxBranchSize)
+							{
+								hasNext = true;
+							}
+						}
+					}
+					*/
+					if (it->Valid(storage, minBlockSize, start_.GetChrId(), chrId) && !hasNext)
 					{
 						ReportBlock(blocksInstance, storage, chrId, k, blocksFound, *it);
 					}
 					
 					purge_.pop_front();
-					instance[abs(chrId)].erase(it);
+					instance[strand][chrId].erase(it);
 				}
 				else
 				{
@@ -200,7 +228,7 @@ namespace Sibelia
 			int64_t k,
 			std::atomic<int64_t> & blocksFound,
 			std::vector<BlockInstance> & blocksInstance,
-			std::vector<std::multiset<Sweeper::Instance> > & instance)
+			std::vector<std::vector<std::multiset<Sweeper::Instance> > > & instance)
 		{
 			JunctionStorage::Iterator successor[2];
 			for (auto it = start_; it.Valid(); it.Inc())
@@ -210,8 +238,9 @@ namespace Sibelia
 					Instance bestPrev;
 					bool found = false;
 					int64_t chrId = jt.GetChrId();
-					auto kt = instance[chrId].upper_bound(Instance(jt));
-					if (kt != instance[chrId].begin())
+					size_t strand = jt.IsPositiveStrand() ? 0 : 1;
+					auto kt = instance[strand][chrId].upper_bound(Instance(jt));
+					if (kt != instance[strand][chrId].begin())
 					{
 						--kt;
 						if ((kt)->IsPositiveStrand() == jt.IsPositiveStrand())
@@ -231,8 +260,8 @@ namespace Sibelia
 
 					if (!found)
 					{
-						auto lt = instance[chrId].insert(Instance(it, jt));
-						purge_.push_back(std::make_pair(chrId, lt));
+						auto lt = instance[strand][chrId].insert(Instance(it, jt));
+						purge_.push_back(std::make_pair(strand == 0 ? (chrId + 1) : -(chrId + 1), lt));
 					}
 					else
 					{
@@ -240,8 +269,8 @@ namespace Sibelia
 						newUpdate.hasNext = false;
 						newUpdate.endIdx[0] = newUpdate.GetIdx(it);
 						newUpdate.endIdx[1] = newUpdate.GetIdx(jt);
-						auto lt = instance[chrId].insert(newUpdate);
-						purge_.push_back(std::make_pair(chrId, lt));
+						auto lt = instance[strand][chrId].insert(newUpdate);
+						purge_.push_back(std::make_pair(strand == 0 ? (chrId + 1) : -(chrId + 1), lt));
 					}
 				}
 
