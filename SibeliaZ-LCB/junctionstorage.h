@@ -104,6 +104,17 @@ namespace Sibelia
 				return chrId_;
 			}
 
+			int32_t PreviousPosition() const
+			{
+				if (IsPositiveStrand())
+				{
+					return JunctionStorage::this_->position_[GetChrId()][idx_ - 1].pos;
+				}
+
+				return -(JunctionStorage::this_->position_[GetChrId()][idx_ + 1].pos + JunctionStorage::this_->k_);
+			}
+
+
 			int32_t GetPosition() const
 			{
 				if (IsPositiveStrand())
@@ -111,7 +122,7 @@ namespace Sibelia
 					return JunctionStorage::this_->position_[GetChrId()][idx_].pos;
 				}
 
-				return JunctionStorage::this_->position_[GetChrId()][idx_].pos + JunctionStorage::this_->k_;
+				return -(JunctionStorage::this_->position_[GetChrId()][idx_].pos + JunctionStorage::this_->k_);
 			}
 
 			char GetChar() const
