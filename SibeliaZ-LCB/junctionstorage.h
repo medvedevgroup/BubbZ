@@ -77,26 +77,24 @@ namespace Sibelia
 				idx_ += 1;
 			}
 
-			Iterator Next() const
+			void Next()
 			{
-				Iterator ret;
 				auto & pos = JunctionStorage::this_->position_[chrId_][idx_];
 				if (pos.nextIdx != UINT_MAX)
 				{
 					if (pos.invert)
 					{
-						ret.isPositive_ = !isPositive_;
-					}
-					else
-					{
-						ret.isPositive_ = isPositive_;
+						isPositive_ = !isPositive_;
 					}
 
-					ret.idx_ = pos.nextIdx;
-					ret.chrId_ = pos.nextChr;
+					idx_ = pos.nextIdx;
+					chrId_ = pos.nextChr;
+				}
+				else
+				{
+					chrId_ = SIZE_MAX;
 				}
 
-				return ret;
 			}
 
 			int32_t GetChrId() const

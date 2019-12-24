@@ -163,7 +163,8 @@ namespace Sibelia
 			JunctionStorage::Iterator successor[2];
 			for (auto it = start_; it.Valid(); it.Inc())
 			{
-				for (auto jt = it.Next(); jt.Valid(); jt = jt.Next())
+				auto jt = it;
+				for (jt.Next(); jt.Valid(); jt.Next())
 				{
 					Instance bestPrev;
 					bool found = false;
