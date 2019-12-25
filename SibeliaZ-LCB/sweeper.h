@@ -97,7 +97,12 @@ namespace Sibelia
 
 			bool operator < (const Instance & cmp) const
 			{
-				return endIdx[1] < cmp.endIdx[1];
+				if (endIdx[1] != cmp.endIdx[1])
+				{
+					return endIdx[1] < cmp.endIdx[1];
+				}
+
+				return startIdx[1] < cmp.startIdx[1];
 			}
 
 			bool operator == (const Instance & cmp) const
@@ -119,14 +124,14 @@ namespace Sibelia
 			}
 		};
 
-		typedef std::multiset<Instance>::iterator InstanceIt;
+		typedef std::set<Instance>::iterator InstanceIt;
 
 		Sweeper(JunctionStorage::Iterator start) : start_(start)
 		{
 
 		}
 
-		void Purge(int32_t lastPos, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, int32_t minBlockSize, int32_t maxBranchSize, std::vector<std::vector<std::multiset<Sweeper::Instance> > > & instance)
+		void Purge(int32_t lastPos, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, int32_t minBlockSize, int32_t maxBranchSize, std::vector<std::vector<std::set<Sweeper::Instance> > > & instance)
 		{
 			while (purge_.size() > 0)
 			{
@@ -158,7 +163,7 @@ namespace Sibelia
 			int64_t k,
 			std::atomic<int64_t> & blocksFound,
 			std::vector<BlockInstance> & blocksInstance,
-			std::vector<std::vector<std::multiset<Sweeper::Instance> > > & instance)
+			std::vector<std::vector<std::set<Sweeper::Instance> > > & instance)
 		{
 			JunctionStorage::Iterator successor[2];
 			for (auto it = start_; it.Valid(); it.Inc())
@@ -186,13 +191,13 @@ namespace Sibelia
 
 					if (!found)
 					{
-						auto lt = instance[strand][chrId].insert(Instance(it, jt));
+						auto lt = instance[strand][chrId].insert(Instance(it, jt)).first;
 						purge_.push_back(std::make_pair(strand == 0 ? (chrId + 1) : -(chrId + 1), lt));
 					}
 					else
 					{
 						Instance newUpdate(bestPrev, it, jt);
-						auto lt = instance[strand][chrId].insert(newUpdate);
+						auto lt = instance[strand][chrId].insert(newUpdate).first;
 						purge_.push_back(std::make_pair(strand == 0 ? (chrId + 1) : -(chrId + 1), lt));
 					}
 				}
@@ -205,8 +210,9 @@ namespace Sibelia
 
 	private:
 		
-		std::deque<std::pair<int64_t, InstanceIt> > purge_;
+		size_t totalSize_;
 		JunctionStorage::Iterator start_;
+		std::deque<std::pair<int64_t, InstanceIt> > purge_;
 
 		bool Compatible(const Instance & inst, int64_t chrId1, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{

@@ -175,7 +175,6 @@ namespace Sibelia
 			blocksFound_ = 0;
 			minBlockSize_ = minBlockSize;
 			maxBranchSize_ = maxBranchSize;
-			maxFlankingSize_ = maxFlankingSize;
 
 			using namespace std::placeholders;
 
@@ -210,7 +209,7 @@ namespace Sibelia
 
 			void operator()() const
 			{
-				std::vector<std::vector<std::multiset<Sweeper::Instance> > > instance(2, std::vector<std::multiset<Sweeper::Instance> >(finder.storage_.GetChrNumber()));
+				std::vector<std::vector<std::set<Sweeper::Instance> > > instance(2, std::vector<std::set<Sweeper::Instance> >(finder.storage_.GetChrNumber()));
 				size_t endIndex = finder.storage_.GetChrNumber();
 				for(bool go = true; go;)
 				{
@@ -369,10 +368,8 @@ namespace Sibelia
 		std::atomic<int64_t> blocksFound_;
 
 		bool scoreFullChains_;
-		int64_t scalingFactor_;
 		int64_t minBlockSize_;
 		int64_t maxBranchSize_;
-		int64_t maxFlankingSize_;
 		JunctionStorage & storage_;
 		std::ofstream debugOut_;
 		std::vector<BlockInstance> blocksInstance_;

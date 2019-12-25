@@ -180,8 +180,6 @@ namespace Sibelia
 			return sequenceDescription_[idx];
 		}
 
-
-
 		void Init(const std::string & inFileName, const std::vector<std::string> & genomesFileName, int64_t threads, int64_t abundanceThreshold, int64_t loopThreshold)
 		{
 			this_ = this;
