@@ -102,7 +102,7 @@ namespace Sibelia
 					return endIdx[1] < cmp.endIdx[1];
 				}
 
-				return startIdx[1] < cmp.startIdx[1];
+				return endIdx[0] < cmp.endIdx[0];
 			}
 
 			bool operator == (const Instance & cmp) const
@@ -191,7 +191,8 @@ namespace Sibelia
 
 					if (!found)
 					{
-						auto lt = instance[strand][chrId].insert(Instance(it, jt)).first;
+						Instance newInstance(it, jt);
+						auto lt = instance[strand][chrId].insert(newInstance).first;
 						purge_.push_back(std::make_pair(strand == 0 ? (chrId + 1) : -(chrId + 1), lt));
 					}
 					else
