@@ -117,7 +117,7 @@ int main(int argc, char * argv[])
 			genomesFileName.getValue(),
 			kvalue.getValue(),
 			threads.getValue(),
-			maxBranchSize.getValue(),
+			abundanceThreshold.getValue(),
 			0);
 
 		std::cout << "Analyzing the graph..." << std::endl;

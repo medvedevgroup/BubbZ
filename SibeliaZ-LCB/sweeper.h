@@ -9,7 +9,7 @@
 
 #include <omp.h>
 
-#include "junctionstorage.h"
+#include "path.h"
 
 namespace Sibelia
 {
@@ -51,11 +51,11 @@ namespace Sibelia
 			int32_t endIdx[2];
 			int32_t startIdx[2];
 
-			Instance() : hasNext(false), parallelEnd(false)//, score(1)
+			Instance(): hasNext(false), parallelEnd(false)//, score(1)
 			{
 
 			}
-
+			
 			bool Valid(int64_t minBlockSize) const
 			{
 				for (size_t l = 0; l < 2; l++)
@@ -68,8 +68,8 @@ namespace Sibelia
 
 				return true;
 			}
-
-			Instance(const Instance & inst, JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt) : hasNext(false)
+			
+			Instance(const Instance & inst, JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt): hasNext(false)
 			{
 				startIdx[0] = inst.startIdx[0];
 				startIdx[1] = inst.startIdx[1];
@@ -78,7 +78,7 @@ namespace Sibelia
 				parallelEnd = it.GetChar() == jt.GetChar();
 			}
 
-			Instance(JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt) : hasNext(false)
+			Instance(JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt): hasNext(false)
 			{
 				startIdx[0] = endIdx[0] = it.GetPosition();
 				startIdx[1] = endIdx[1] = jt.GetPosition();
@@ -141,7 +141,7 @@ namespace Sibelia
 					{
 						ReportBlock(blocksInstance, chrId, k, blocksFound, *it);
 					}
-
+					
 					purge_.pop_front();
 					instance[strand][chrId].erase(it);
 				}
@@ -174,7 +174,7 @@ namespace Sibelia
 					if (kt != instance[strand][chrId].begin())
 					{
 						--kt;
-						successor[0] = it;
+						successor[0] = it;							
 						successor[1] = jt;
 						if (Compatible(*kt, chrId, successor, maxBranchSize))
 						{
@@ -204,7 +204,7 @@ namespace Sibelia
 		}
 
 	private:
-
+		
 		std::deque<std::pair<int64_t, InstanceIt> > purge_;
 		JunctionStorage::Iterator start_;
 
@@ -216,31 +216,31 @@ namespace Sibelia
 			for (size_t i = 0; i < 2; i++)
 			{
 				if (inst.endIdx[i] != succ[i].PreviousPosition())
-				{
+				{					
 					validSuccessor = false;
 				}
 
 				if (abs(inst.endIdx[i] - succ[i].GetPosition()) >= maxBranchSize)
-				{
+				{					
 					withinBubble = false;
 				}
 			}
-
+			
 			if (withinBubble || validSuccessor)
 			{
-				if (chrId0 == chrId1)
+				if(chrId0 == chrId1)
 				{
 					size_t startIdx2 = min(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
 					size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
 					if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
-					{
+					{					
 						return false;
 					}
 				}
 
 				return true;
 			}
-
+			
 			return false;
 		}
 
@@ -260,7 +260,7 @@ namespace Sibelia
 				}
 			}
 		}
-
+		
 	};
 }
 
