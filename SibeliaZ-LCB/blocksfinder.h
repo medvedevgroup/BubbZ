@@ -99,7 +99,7 @@ namespace Sibelia
 		struct FancyIterator : public std::iterator<std::forward_iterator_tag, ReturnType>
 		{
 		public:
-			FancyIterator& operator++()
+			FancyIterator & operator++()
 			{
 				++it;
 				return *this;
@@ -175,6 +175,7 @@ namespace Sibelia
 			blocksFound_ = 0;
 			minBlockSize_ = minBlockSize;
 			maxBranchSize_ = maxBranchSize;
+			maxFlankingSize_ = maxFlankingSize;
 
 			using namespace std::placeholders;
 
@@ -183,7 +184,7 @@ namespace Sibelia
 			progressCount_ = 0;
 			currentIndex_ = 0;
 			workInstance_.resize(threads);
-			#pragma omp parallel num_threads(threads)
+#pragma omp parallel num_threads(threads)
 			{
 				ChrSweep process(*this);
 				process();
@@ -209,12 +210,12 @@ namespace Sibelia
 
 			void operator()() const
 			{
-				std::vector<std::vector<std::set<Sweeper::Instance> > > instance(2, std::vector<std::set<Sweeper::Instance> >(finder.storage_.GetChrNumber()));
+				std::vector<std::vector<std::multiset<Sweeper::Instance> > > instance(2, std::vector<std::multiset<Sweeper::Instance> >(finder.storage_.GetChrNumber()));
 				size_t endIndex = finder.storage_.GetChrNumber();
-				for(bool go = true; go;)
+				for (bool go = true; go;)
 				{
 					size_t nowChr;
-					#pragma omp critical
+#pragma omp critical
 					{
 						if (finder.currentIndex_ < endIndex)
 						{
@@ -235,11 +236,11 @@ namespace Sibelia
 							std::cout << ++finder.progressCount_ << ' ' << finder.storage_.GetChrNumber() << std::endl;
 						}
 					}
-					
+
 				}
 			}
 		};
-		
+
 
 		void ListBlocksSequences(const BlockList & block, const std::string & directory) const
 		{
@@ -287,23 +288,23 @@ namespace Sibelia
 			std::vector<std::vector<bool> > covered(storage_.GetChrNumber());
 			for (size_t i = 0; i < covered.size(); i++)
 			{
-				covered[i].assign(storage_.GetChrSequence(i).size() + 1, false);
+			covered[i].assign(storage_.GetChrSequence(i).size() + 1, false);
 			}
 
 			for (auto & b : blocksInstance_)
 			{
-				for (size_t i = b.GetStart(); i < b.GetEnd(); i++)
-				{
-					covered[b.GetChrId()][i] = true;
-				}
+			for (size_t i = b.GetStart(); i < b.GetEnd(); i++)
+			{
+			covered[b.GetChrId()][i] = true;
+			}
 			}
 
 			size_t total = 0;
 			size_t totalCovered = 0;
 			for (auto & chr : covered)
 			{
-				total += chr.size();
-				totalCovered += std::count(chr.begin(), chr.end(), true);
+			total += chr.size();
+			totalCovered += std::count(chr.begin(), chr.end(), true);
 			}
 			*/
 
@@ -325,7 +326,7 @@ namespace Sibelia
 
 		}
 
-	
+
 		template<class T> T Min(const T & a, const T & b)
 		{
 			if (a < b)
@@ -368,8 +369,10 @@ namespace Sibelia
 		std::atomic<int64_t> blocksFound_;
 
 		bool scoreFullChains_;
+		int64_t scalingFactor_;
 		int64_t minBlockSize_;
 		int64_t maxBranchSize_;
+		int64_t maxFlankingSize_;
 		JunctionStorage & storage_;
 		std::ofstream debugOut_;
 		std::vector<BlockInstance> blocksInstance_;

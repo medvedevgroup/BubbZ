@@ -9,7 +9,7 @@
 
 #include <omp.h>
 
-#include "path.h"
+#include "junctionstorage.h"
 
 namespace Sibelia
 {
@@ -51,11 +51,11 @@ namespace Sibelia
 			int32_t endIdx[2];
 			int32_t startIdx[2];
 
-			Instance(): hasNext(false), parallelEnd(false)//, score(1)
+			Instance() : hasNext(false), parallelEnd(false)//, score(1)
 			{
 
 			}
-			
+
 			bool Valid(int64_t minBlockSize) const
 			{
 				for (size_t l = 0; l < 2; l++)
@@ -68,8 +68,8 @@ namespace Sibelia
 
 				return true;
 			}
-			
-			Instance(const Instance & inst, JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt): hasNext(false)
+
+			Instance(const Instance & inst, JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt) : hasNext(false)
 			{
 				startIdx[0] = inst.startIdx[0];
 				startIdx[1] = inst.startIdx[1];
@@ -78,7 +78,7 @@ namespace Sibelia
 				parallelEnd = it.GetChar() == jt.GetChar();
 			}
 
-			Instance(JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt): hasNext(false)
+			Instance(JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt) : hasNext(false)
 			{
 				startIdx[0] = endIdx[0] = it.GetPosition();
 				startIdx[1] = endIdx[1] = jt.GetPosition();
@@ -97,12 +97,7 @@ namespace Sibelia
 
 			bool operator < (const Instance & cmp) const
 			{
-				if (endIdx[1] != cmp.endIdx[1])
-				{
-					return endIdx[1] < cmp.endIdx[1];
-				}
-
-				return endIdx[0] < cmp.endIdx[0];
+				return endIdx[1] < cmp.endIdx[1];
 			}
 
 			bool operator == (const Instance & cmp) const
@@ -124,14 +119,14 @@ namespace Sibelia
 			}
 		};
 
-		typedef std::set<Instance>::iterator InstanceIt;
+		typedef std::multiset<Instance>::iterator InstanceIt;
 
 		Sweeper(JunctionStorage::Iterator start) : start_(start)
 		{
 
 		}
 
-		void Purge(int32_t lastPos, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, int32_t minBlockSize, int32_t maxBranchSize, std::vector<std::vector<std::set<Sweeper::Instance> > > & instance)
+		void Purge(int32_t lastPos, int64_t k, std::atomic<int64_t> & blocksFound, std::vector<BlockInstance> & blocksInstance, int32_t minBlockSize, int32_t maxBranchSize, std::vector<std::vector<std::multiset<Sweeper::Instance> > > & instance)
 		{
 			while (purge_.size() > 0)
 			{
@@ -146,7 +141,7 @@ namespace Sibelia
 					{
 						ReportBlock(blocksInstance, chrId, k, blocksFound, *it);
 					}
-					
+
 					purge_.pop_front();
 					instance[strand][chrId].erase(it);
 				}
@@ -163,7 +158,7 @@ namespace Sibelia
 			int64_t k,
 			std::atomic<int64_t> & blocksFound,
 			std::vector<BlockInstance> & blocksInstance,
-			std::vector<std::vector<std::set<Sweeper::Instance> > > & instance)
+			std::vector<std::vector<std::multiset<Sweeper::Instance> > > & instance)
 		{
 			JunctionStorage::Iterator successor[2];
 			for (auto it = start_; it.Valid(); it.Inc())
@@ -179,7 +174,7 @@ namespace Sibelia
 					if (kt != instance[strand][chrId].begin())
 					{
 						--kt;
-						successor[0] = it;							
+						successor[0] = it;
 						successor[1] = jt;
 						if (Compatible(*kt, chrId, successor, maxBranchSize))
 						{
@@ -191,14 +186,13 @@ namespace Sibelia
 
 					if (!found)
 					{
-						Instance newInstance(it, jt);
-						auto lt = instance[strand][chrId].insert(newInstance).first;
+						auto lt = instance[strand][chrId].insert(Instance(it, jt));
 						purge_.push_back(std::make_pair(strand == 0 ? (chrId + 1) : -(chrId + 1), lt));
 					}
 					else
 					{
 						Instance newUpdate(bestPrev, it, jt);
-						auto lt = instance[strand][chrId].insert(newUpdate).first;
+						auto lt = instance[strand][chrId].insert(newUpdate);
 						purge_.push_back(std::make_pair(strand == 0 ? (chrId + 1) : -(chrId + 1), lt));
 					}
 				}
@@ -210,10 +204,9 @@ namespace Sibelia
 		}
 
 	private:
-		
-		size_t totalSize_;
-		JunctionStorage::Iterator start_;
+
 		std::deque<std::pair<int64_t, InstanceIt> > purge_;
+		JunctionStorage::Iterator start_;
 
 		bool Compatible(const Instance & inst, int64_t chrId1, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{
@@ -223,31 +216,31 @@ namespace Sibelia
 			for (size_t i = 0; i < 2; i++)
 			{
 				if (inst.endIdx[i] != succ[i].PreviousPosition())
-				{					
+				{
 					validSuccessor = false;
 				}
 
 				if (abs(inst.endIdx[i] - succ[i].GetPosition()) >= maxBranchSize)
-				{					
+				{
 					withinBubble = false;
 				}
 			}
-			
+
 			if (withinBubble || validSuccessor)
 			{
-				if(chrId0 == chrId1)
+				if (chrId0 == chrId1)
 				{
 					size_t startIdx2 = min(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
 					size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
 					if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
-					{					
+					{
 						return false;
 					}
 				}
 
 				return true;
 			}
-			
+
 			return false;
 		}
 
@@ -267,7 +260,7 @@ namespace Sibelia
 				}
 			}
 		}
-		
+
 	};
 }
 
