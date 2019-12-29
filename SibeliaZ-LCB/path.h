@@ -6,6 +6,15 @@
 #include <algorithm>
 #include "distancekeeper.h"
 
+
+#ifdef _MSC_VER
+	#include <intrin.h>
+#else
+
+#endif
+
+
+
 namespace Sibelia
 {
 	struct Instance
@@ -97,38 +106,60 @@ namespace Sibelia
 		void Init(size_t chrSize)
 		{
 			instance_.resize(chrSize, 0);
-			isActive_.resize(chrSize, false);
+			isActive_.resize((chrSize >> 6) + 1, false);
 		}
 
 		void Add(Instance * inst, size_t idx)
 		{
 			instance_[idx] = inst;
-			isActive_[idx] = true;
+			uint64_t bit;
+			uint64_t element;
+			GetCoord(idx, element, bit);
+			isActive_[element] |= uint64_t(1) << uint64_t(bit);
 		}
 
 		Instance* Retreive(const JunctionStorage & storage, int32_t maxBranchSize, int32_t idx, bool isPositive)
 		{
+			uint64_t bit;
+			uint64_t element;
+			GetCoord(idx, element, bit);
+			int32_t maxBranchSizeElement = (maxBranchSize >> 6) + 1;
 			if (isPositive)
 			{
-				int32_t limit = max(0, idx - maxBranchSize);
-				for (; idx >= limit; idx--)
+				int32_t elementLimit = max(0, int32_t(element) - maxBranchSizeElement);
+				for (int32_t e = element; e >= elementLimit; e--)
 				{
-					if (isActive_[idx])
+					auto mask = isActive_[e];
+					if (e == element && bit < 63)
 					{
-						return instance_[idx];
+						auto application = (uint64_t(1) << (bit + uint64_t(1)));
+						mask = mask & (application - uint64_t(1));
+					}
+
+					if (mask != 0)
+					{
+						return GetInstanceBefore(e, mask);
 					}
 				}
 			}
 			else
 			{
-				int32_t limit = min(isActive_.size(), idx + maxBranchSize);
-				for (; idx < isActive_.size(); idx++)
+				int32_t elementLimit = min(int32_t(isActive_.size()), int32_t(element) + maxBranchSizeElement);
+				for (int32_t e = element; e < elementLimit; e++)
 				{
-					if (isActive_[idx])
+					auto mask = isActive_[e];
+					if (e == element)
 					{
-						return instance_[idx];
+						auto application = (uint64_t(1) << bit) - uint64_t(1);
+						mask = mask & (~application);
+					}
+
+					if (mask != 0)
+					{
+						return GetInstanceAfter(e, mask);
 					}
 				}
+
 			}
 
 			return 0;
@@ -139,13 +170,44 @@ namespace Sibelia
 			if (instance_[idx] == inst)
 			{
 				instance_[idx] = 0;
-				isActive_[idx] = false;
+				uint64_t bit;
+				uint64_t element;
+				GetCoord(idx, element, bit);
+				isActive_[element] &= ~(uint64_t(1) << bit);
 			}
 		}
 
 	private:
-		std::vector<bool> isActive_;
+		std::vector<uint64_t> isActive_;
 		std::vector<Instance*> instance_;
+
+		Instance* GetInstanceBefore(uint64_t element, uint64_t mask)
+		{
+#ifdef _MSC_VER
+			uint64_t bit = 64 - __lzcnt64(mask);
+#else
+			uint64_t bit = 64 - __builtin_clzll(mask);
+#endif
+			return instance_[(element << 6) | (bit - 1)];
+		}
+
+		Instance* GetInstanceAfter(uint64_t element, uint64_t mask)
+		{
+#ifdef _MSC_VER
+			uint64_t bit = _tzcnt_u64(mask);
+#else
+			uint64_t bit = __builtin_ctzll(mask);
+#endif
+			return instance_[(element << 6) | bit];
+		}
+
+		void GetCoord(uint64_t idx, uint64_t & element, uint64_t & bit) const
+		{
+			bit = idx & ((uint64_t(1) << uint64_t(6)) - 1);
+			element = idx >> 6;
+		}
+
+
 	};
 }
 
