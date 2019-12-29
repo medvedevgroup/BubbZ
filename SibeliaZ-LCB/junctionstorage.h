@@ -180,7 +180,10 @@ namespace Sibelia
 			return sequenceDescription_[idx];
 		}
 
-
+		size_t GeChrSize(size_t chr) const
+		{
+			return position_[chr].size();
+		}
 
 		void Init(const std::string & inFileName, const std::vector<std::string> & genomesFileName, int64_t threads, int64_t abundanceThreshold, int64_t loopThreshold)
 		{
