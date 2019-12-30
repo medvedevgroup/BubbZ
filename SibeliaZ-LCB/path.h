@@ -13,8 +13,6 @@
 
 #endif
 
-
-
 namespace Sibelia
 {
 	struct Instance

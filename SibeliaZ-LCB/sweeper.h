@@ -138,7 +138,7 @@ namespace Sibelia
 
 	private:
 		JunctionStorage::Iterator start_;
-		std::list<Instance> purge_;
+		std::deque<Instance> purge_;
 
 		bool Compatible(const Instance & inst, int64_t chrId1, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{
