@@ -221,7 +221,7 @@ namespace Sibelia
 		const std::string header[] =
 		{
 			"##gff-version 2",
-			std::string("##source-version SibeliaZ ") + VERSION,
+			std::string("##source-version BubbZ ") + VERSION,
 			"##Type DNA"
 		};
 
@@ -230,20 +230,16 @@ namespace Sibelia
 		{
 			size_t start = it->GetStart() + 1;
 			size_t end = it->GetEnd();
-			const std::string record[] =
-			{
-				storage_.GetChrDescription(it->GetChrId()), 
-				"SibeliaZ",
-				"LCB_copy",
-				IntToStr(start),
-				IntToStr(end),
-				".",
-				(it->GetDirection() ? "+" : "-"),
-				".",
-				"id=" + IntToStr(static_cast<size_t>(it->GetBlockId()))
-			};
-
-			out << Join(record, record + sizeof(record) / sizeof(record[0]), "\t") << std::endl;
+			out << storage_.GetChrDescription(it->GetChrId()) << "\t" <<
+				"." << "\t" <<
+				"." << "\t" <<
+				start << "\t" <<
+				end << "\t" <<
+				"." << "\t" <<
+				(it->GetDirection() ? "+" : "-") << "\t" <<
+				"." << "\t" <<
+				"id=" << it->GetBlockId() <<
+				std::endl;
 		}
 	}
 

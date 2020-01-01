@@ -104,6 +104,12 @@ int main(int argc, char * argv[])
 			cmd,
 			false);
 
+		TCLAP::SwitchArg legacyOut("",
+			"legacy",
+			"Output indices in legacy format",
+			cmd,
+			false);
+
 		TCLAP::UnlabeledMultiArg<std::string> genomesFileName("filenames",
 			"FASTA file(s) with nucleotide sequences.",
 			true,
@@ -135,7 +141,7 @@ int main(int argc, char * argv[])
 		std::cout << std::time(0) - tick << std::endl;
 		tick = std::time(0);
 		std::cout << "Generating the output..." << std::endl;
-		finder.GenerateOutput(outDirName.getValue(), !noSeq.getValue());
+		finder.GenerateOutput(outDirName.getValue(), !noSeq.getValue(), legacyOut.getValue());
 		std::cout << std::time(0) - tick << std::endl;
 	}
 	catch (TCLAP::ArgException & e)

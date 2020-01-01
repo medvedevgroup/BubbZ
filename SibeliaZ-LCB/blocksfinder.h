@@ -289,7 +289,7 @@ namespace Sibelia
 		}
 
 
-		void GenerateOutput(const std::string & outDir, bool genSeq)
+		void GenerateOutput(const std::string & outDir, bool genSeq, bool legacyOut)
 		{
 			const auto & trimmedBlocks = blocksInstance_;
 			/*
@@ -330,8 +330,10 @@ namespace Sibelia
 				ListBlocksSequences(trimmedBlocks, blocksDir);
 			}
 
-			ListBlocksIndices(trimmedBlocks, outDir + "/" + "blocks_coords.txt");
-
+			if (legacyOut)
+			{
+				ListBlocksIndices(trimmedBlocks, outDir + "/" + "blocks_coords.txt");
+			}
 		}
 
 	
