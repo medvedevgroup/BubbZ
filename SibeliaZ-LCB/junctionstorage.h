@@ -188,26 +188,6 @@ namespace Sibelia
 		void Init(const std::string & inFileName, const std::vector<std::string> & genomesFileName, int64_t threads, int64_t abundanceThreshold, int64_t loopThreshold)
 		{
 			this_ = this;
-			std::vector<size_t> abundance;
-			{
-				TwoPaCo::JunctionPositionReader reader(inFileName);
-				for (TwoPaCo::JunctionPosition junction; reader.NextJunctionPosition(junction);)
-				{
-					if (junction.GetChr() >= position_.size())
-					{
-						position_.push_back(std::vector<Position>());
-					}
-
-					size_t absId = abs(junction.GetId());
-					while (absId >= abundance.size())
-					{
-						abundance.push_back(0);
-					}
-
-					++abundance[absId];
-				}
-			}
-			
 			size_t record = 0;
 			sequence_.resize(position_.size());
 			for (const auto & fastaFileName : genomesFileName)
@@ -216,6 +196,7 @@ namespace Sibelia
 				{
 					sequenceDescription_.push_back(parser.GetCurrentHeader());
 					sequenceId_[parser.GetCurrentHeader()] = sequenceDescription_.size() - 1;
+					sequence_.push_back(std::string());
 					for (char ch; parser.GetChar(ch); )
 					{
 						sequence_[record].push_back(ch);
@@ -223,12 +204,17 @@ namespace Sibelia
 				}
 			}
 
-			std::vector<PrevPosition> prevPos(abundance.size());
+			std::vector<PrevPosition> prevPos;
+			position_.resize(sequence_.size());
 			TwoPaCo::JunctionPositionReader reader(inFileName);
 			for (TwoPaCo::JunctionPosition junction; reader.NextJunctionPosition(junction);)
 			{
 				size_t absId = abs(junction.GetId());
-				if (abundance[absId] < size_t(abundanceThreshold))
+				while (absId >= prevPos.size())
+				{
+					prevPos.push_back(PrevPosition());
+				}
+
 				{
 					auto chr = junction.GetChr();
 					auto pos = junction.GetPos();
