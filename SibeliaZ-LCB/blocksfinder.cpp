@@ -239,7 +239,7 @@ namespace Sibelia
 				(it->GetDirection() ? "+" : "-") << "\t" <<
 				"." << "\t" <<
 				"id=" << it->GetBlockId() <<
-				std::endl;
+				"\n";
 		}
 	}
 
