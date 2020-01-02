@@ -250,45 +250,6 @@ namespace Sibelia
 		};
 		
 
-		void ListBlocksSequences(const BlockList & block, const std::string & directory) const
-		{
-			std::vector<IndexPair> group;
-			BlockList blockList = block;
-			GroupBy(blockList, compareById, std::back_inserter(group));
-			for (std::vector<IndexPair>::iterator it = group.begin(); it != group.end(); ++it)
-			{
-				std::ofstream out;
-				std::stringstream ss;
-				ss << directory << "/" << blockList[it->first].GetBlockId() << ".fa";
-				TryOpenFile(ss.str(), out);
-				for (size_t block = it->first; block < it->second; block++)
-				{
-					int64_t length = blockList[block].GetLength();
-					size_t chr = blockList[block].GetChrId();
-					int64_t chrSize = storage_.GetChrSequence(chr).size();
-					out << ">" << blockList[block].GetBlockId() << "_" << block - it->first << " ";
-					out << storage_.GetChrDescription(chr) << ";";
-					if (blockList[block].GetSignedBlockId() > 0)
-					{
-						out << blockList[block].GetStart() << ";" << length << ";" << "+;" << chrSize << std::endl;
-						OutputLines(storage_.GetChrSequence(chr).begin() + blockList[block].GetStart(), length, out);
-					}
-					else
-					{
-						int64_t start = chrSize - blockList[block].GetEnd();
-						out << start << ";" << length << ";" << "-;" << chrSize << std::endl;
-						std::string::const_reverse_iterator it(storage_.GetChrSequence(chr).begin() + blockList[block].GetEnd());
-						OutputLines(CFancyIterator(it, TwoPaCo::DnaChar::ReverseChar, ' '), length, out);
-					}
-
-					out << std::endl;
-				}
-
-				//std::cout << std::endl;
-			}
-		}
-
-
 		void GenerateOutput(const std::string & outDir, bool genSeq, bool legacyOut)
 		{
 			const auto & trimmedBlocks = blocksInstance_;
@@ -324,11 +285,6 @@ namespace Sibelia
 			CreateOutDirectory(outDir);
 			std::string blocksDir = outDir + "/blocks";
 			ListBlocksIndicesGFF(trimmedBlocks, outDir + "/" + "blocks_coords.gff");
-			if (genSeq)
-			{
-				CreateOutDirectory(blocksDir);
-				ListBlocksSequences(trimmedBlocks, blocksDir);
-			}
 
 			if (legacyOut)
 			{

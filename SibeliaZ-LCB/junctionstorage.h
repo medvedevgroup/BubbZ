@@ -212,7 +212,7 @@ namespace Sibelia
 				size_t absId = abs(junction.GetId());
 				while (absId >= prevPos.size())
 				{
-					prevPos.push_back(PrevPosition());
+					prevPos.resize(absId + 1);
 				}
 
 				{
