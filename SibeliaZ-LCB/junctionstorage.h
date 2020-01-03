@@ -250,21 +250,21 @@ namespace Sibelia
 
 					if (junction.GetId() > 0)
 					{
-						if (absId >= posPointer_.size())
+						if (absId >= pointer_.size())
 						{
-							posPointer_.resize(absId + 1);
+							pointer_.resize(absId + 1);
 						}
 
-						posPointer_[absId].push_back(Pointer(chr, position_[junction.GetChr()].size() - 1));
+						pointer_[absId].push_back(Pointer(chr, position_[junction.GetChr()].size() - 1));
 					}
 					else
 					{
-						if(absId >= negPointer_.size())
+						if(absId >= pointer_.size())
 						{
-							negPointer_.resize(absId + 1);
+							pointer_.resize(absId + 1);
 						}
 
-						negPointer_[absId].push_back(Pointer(chr, position_[junction.GetChr()].size() - 1));
+						pointer_[absId].push_back(Pointer(-chr, position_[junction.GetChr()].size() - 1));
 					}
 
 				}
@@ -284,19 +284,18 @@ namespace Sibelia
 
 			bool operator < (const Pointer & p) const
 			{
-				if (chrId != p.chrId)
+				if (abs(chrId) != abs(p.chrId))
 				{
-					return chrId < p.chrId;
+					return abs(chrId) < abs(p.chrId);
 				}
 
 				return idx < p.idx;
 			}
 		};
 
-		const std::vector<Pointer>& Pointers(size_t vid) const
+		const std::vector<Pointer>& Pointers(int64_t vid) const
 		{
-			auto & pointer = vid > 0 ? posPointer_[vid] : negPointer_[-vid];
-			return pointer;
+			return pointer_[abs(vid)];
 		}
 
 		JunctionStorage() {}
@@ -317,8 +316,7 @@ namespace Sibelia
 		size_t abundance_;
 		std::map<std::string, size_t> sequenceId_;
 		std::vector<size_t> chrSeqSize_;
-		std::vector<std::vector<Pointer> > posPointer_;
-		std::vector<std::vector<Pointer> > negPointer_;
+		std::vector<std::vector<Pointer> > pointer_;
 		std::vector<std::string> sequenceDescription_;
 		std::vector<std::vector<Position> > position_;
 		static JunctionStorage * this_;
