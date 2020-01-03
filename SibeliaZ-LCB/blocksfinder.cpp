@@ -10,14 +10,7 @@ namespace Sibelia
 #ifdef _WIN32
 #include <direct.h>
 #endif
-/*
-	bool operator < (const Template & a, const Template & b)
-	{
-		int64_t dist1 = a.second.GetPosition() - a.first.GetPosition();
-		int64_t dist2 = b.second.GetPosition() - b.first.GetPosition();
-		return dist1 < dist2;
-	}
-	*/
+
 	void CreateOutDirectory(const std::string & path)
 	{
 		int result = 0;
@@ -169,7 +162,7 @@ namespace Sibelia
 		out << "Seq_id\tSize\tDescription" << std::endl;
 		for (size_t i = 0; i < storage_.GetChrNumber(); i++)
 		{
-			out << i + 1 << '\t' << storage_.GetChrSequence(i).size() << '\t' << storage_.GetChrDescription(i) << std::endl;
+			out << i + 1 << '\t' << storage_.GeChrSequenceSize(i) << '\t' << storage_.GetChrDescription(i) << std::endl;
 		}
 
 		out << DELIMITER << std::endl;

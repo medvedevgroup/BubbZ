@@ -98,12 +98,6 @@ int main(int argc, char * argv[])
 			"directory name",
 			cmd);
 
-		TCLAP::SwitchArg noSeq("",
-			"noseq",
-			"Do not output blocks sequences",
-			cmd,
-			false);
-
 		TCLAP::SwitchArg legacyOut("",
 			"legacy",
 			"Output indices in legacy format",
@@ -141,7 +135,7 @@ int main(int argc, char * argv[])
 		std::cout << std::time(0) - tick << std::endl;
 		tick = std::time(0);
 		std::cout << "Generating the output..." << std::endl;
-		finder.GenerateOutput(outDirName.getValue(), !noSeq.getValue(), legacyOut.getValue());
+		finder.GenerateOutput(outDirName.getValue(), false, legacyOut.getValue());
 		std::cout << std::time(0) - tick << std::endl;
 	}
 	catch (TCLAP::ArgException & e)

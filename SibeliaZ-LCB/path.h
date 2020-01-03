@@ -101,8 +101,10 @@ namespace Sibelia
 
 		}
 
-		void Init(size_t chrSize)
+		void Init(size_t chr1, bool isPositiveStrand, size_t chrSize)
 		{
+			chr1_ = chr1;
+			isPositiveStrand_ = isPositiveStrand;
 			instance_.resize(chrSize, 0);
 			isActive_.resize((chrSize >> 6) + 1, false);
 		}
@@ -116,7 +118,7 @@ namespace Sibelia
 			isActive_[element] |= uint64_t(1) << uint64_t(bit);
 		}
 
-		Instance* Retreive(const JunctionStorage & storage, int32_t maxBranchSize, int32_t idx, bool isPositive)
+		Instance* Retreive(const JunctionStorage & storage, std::deque<std::vector<Instance>* > & q, int32_t maxBranchSize, size_t chr0, int32_t idx, bool isPositive)
 		{
 			uint64_t bit;
 			uint64_t element;
@@ -136,7 +138,7 @@ namespace Sibelia
 
 					if (mask != 0)
 					{
-						return GetInstanceBefore(e, mask);
+						return GetInstanceBefore(storage, q, chr0, e, mask);
 					}
 				}
 			}
@@ -176,17 +178,41 @@ namespace Sibelia
 		}
 
 	private:
+		size_t chr1_;
+		bool isPositiveStrand_;
 		std::vector<uint64_t> isActive_;
 		std::vector<Instance*> instance_;
 
-		Instance* GetInstanceBefore(uint64_t element, uint64_t mask)
+		size_t GetMagicIndex(const JunctionStorage & storage, std::deque<std::vector<Instance>* > & q, size_t chr0, size_t idx) const
+		{
+			int64_t vid = storage.GetVertexId(chr1_, idx);
+			if (isPositiveStrand_)
+			{
+				vid = -vid;
+			}
+			/*
+			size_t best;
+			auto bound = q.back().back().endIdx[0];
+			auto & pointer = storage.Pointers(vid);
+			for (auto & pt : pointer)
+			{
+				if (pt.chrId == chr0 && storage.GetPosition(chr0, pt.idx) <= bound)
+				{
+					best = pt.idx;
+				}
+			}*/
+		}
+
+		Instance* GetInstanceBefore(const JunctionStorage & storage, std::deque<std::vector<Instance>* > & q, size_t chr0, uint64_t element, uint64_t mask)
 		{
 #ifdef _MSC_VER
 			uint64_t bit = 64 - __lzcnt64(mask);
 #else
 			uint64_t bit = 64 - __builtin_clzll(mask);
 #endif
-			return instance_[(element << 6) | (bit - 1)];
+			auto idx = (element << 6) | (bit - 1);
+			//assert(&q[GetMagicIndex(storage, q, chr0, idx)] == instance_[idx]);
+			return instance_[idx];
 		}
 
 		Instance* GetInstanceAfter(uint64_t element, uint64_t mask)

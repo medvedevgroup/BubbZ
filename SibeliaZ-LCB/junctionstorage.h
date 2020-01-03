@@ -28,11 +28,12 @@ namespace Sibelia
 			uint32_t pos;
 			uint32_t nextIdx;
 			int32_t nextChr;
+			int64_t vertexId;
 			char ch;
 			char revCh;
 			bool invert;
 
-			Position(const TwoPaCo::JunctionPosition & junction) : nextIdx(UINT_MAX)
+			Position(const TwoPaCo::JunctionPosition & junction) : nextIdx(UINT_MAX), vertexId(junction.GetId())
 			{
 				pos = junction.GetPos();
 			}
@@ -165,19 +166,31 @@ namespace Sibelia
 			bool isPositive_;
 		};
 
+		int64_t GetVertexId(size_t chr, size_t idx) const
+		{
+			return position_[chr][idx].vertexId;
+		}
+
+
+		int64_t GetPosition(size_t chr, size_t idx) const
+		{
+			return position_[chr][idx].pos;
+		}
+
+
 		int64_t GetChrNumber() const
 		{
 			return position_.size();
 		}
 
-		const std::string& GetChrSequence(uint64_t idx) const
-		{
-			return sequence_[idx];
-		}
-
 		const std::string& GetChrDescription(uint64_t idx) const
 		{
 			return sequenceDescription_[idx];
+		}
+
+		size_t GeChrSequenceSize(size_t chr) const
+		{
+			return chrSeqSize_[chr];
 		}
 
 		size_t GeChrSize(size_t chr) const
@@ -189,7 +202,7 @@ namespace Sibelia
 		{
 			this_ = this;
 			size_t record = 0;
-			sequence_.resize(position_.size());
+			std::vector<std::string> sequence_(position_.size());
 			for (const auto & fastaFileName : genomesFileName)
 			{
 				for (TwoPaCo::StreamFastaParser parser(fastaFileName); parser.ReadRecord(); record++)
@@ -201,6 +214,8 @@ namespace Sibelia
 					{
 						sequence_[record].push_back(ch);
 					}
+
+					chrSeqSize_.push_back(sequence_[record].size());
 				}
 			}
 
@@ -210,11 +225,11 @@ namespace Sibelia
 			for (TwoPaCo::JunctionPosition junction; reader.NextJunctionPosition(junction);)
 			{
 				size_t absId = abs(junction.GetId());
-				while (absId >= prevPos.size())
+				if (absId >= prevPos.size())
 				{
 					prevPos.resize(absId + 1);
 				}
-
+			
 				{
 					auto chr = junction.GetChr();
 					auto pos = junction.GetPos();
@@ -232,24 +247,78 @@ namespace Sibelia
 					prevPos[absId].prevId = junction.GetId();
 					prevPos[absId].prevChr = junction.GetChr();
 					prevPos[absId].prevIdx = position_[junction.GetChr()].size() - 1;
+
+					if (junction.GetId() > 0)
+					{
+						if (absId >= posPointer_.size())
+						{
+							posPointer_.resize(absId + 1);
+						}
+
+						posPointer_[absId].push_back(Pointer(chr, position_[junction.GetChr()].size() - 1));
+					}
+					else
+					{
+						if(absId >= negPointer_.size())
+						{
+							negPointer_.resize(absId + 1);
+						}
+
+						negPointer_[absId].push_back(Pointer(chr, position_[junction.GetChr()].size() - 1));
+					}
+
 				}
 			}
 		}
 
+		struct Pointer
+		{
+			int32_t chrId;
+			int32_t idx;
+
+			Pointer() {}
+			Pointer(int32_t chrId, int32_t idx) : chrId(chrId), idx(idx)
+			{
+
+			}
+
+			bool operator < (const Pointer & p) const
+			{
+				if (chrId != p.chrId)
+				{
+					return chrId < p.chrId;
+				}
+
+				return idx < p.idx;
+			}
+		};
+
+		const std::vector<Pointer>& Pointers(size_t vid) const
+		{
+			auto & pointer = vid > 0 ? posPointer_[vid] : negPointer_[-vid];
+			return pointer;
+		}
+
 		JunctionStorage() {}
-		JunctionStorage(const std::string & fileName, const std::vector<std::string> & genomesFileName, uint64_t k, int64_t threads, int64_t abundanceThreshold, int64_t loopThreshold) : k_(k)
+		JunctionStorage(const std::string & fileName, const std::vector<std::string> & genomesFileName, uint64_t k, int64_t threads, int64_t abundanceThreshold, int64_t loopThreshold) : k_(k), abundance_(abundanceThreshold)
 		{
 			Init(fileName, genomesFileName, threads, abundanceThreshold, loopThreshold);
 		}
 
-
+		size_t GetAbundance() const
+		{
+			return abundance_;
+		}
 
 	private:
 
 
 		int64_t k_;
+		size_t abundance_;
 		std::map<std::string, size_t> sequenceId_;
-		std::vector<std::string> sequence_;
+		std::vector<size_t> chrSeqSize_;
+		std::vector<std::vector<Pointer> > posPointer_;
+		std::vector<std::vector<Pointer> > negPointer_;
 		std::vector<std::string> sequenceDescription_;
 		std::vector<std::vector<Position> > position_;
 		static JunctionStorage * this_;

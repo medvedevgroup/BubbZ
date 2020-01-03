@@ -61,25 +61,38 @@ namespace Sibelia
 		{
 			while (purge_.size() > 0)
 			{
-				int64_t chrId = abs(purge_.front().chrId) - 1;
-				size_t strand = purge_.front().chrId > 0 ? 0 : 1;
-				int32_t diff = lastPos - (purge_.front().endIdx[0]);
-				if (diff >= maxBranchSize)
+				if (purge_.front()->size() > 0)
 				{
-					auto & it = purge_.front();
-					bool hasNext = it.hasNext;
-					if (it.Valid(minBlockSize) && !hasNext)
+					int32_t diff = lastPos - (purge_.front()->front().endIdx[0]);
+					if (diff >= maxBranchSize)
 					{
-						ReportBlock(blocksInstance, chrId, k, blocksFound, it);
+						for (auto & it : *purge_.front())
+						{
+							int64_t chrId = abs(it.chrId) - 1;
+							size_t strand = it.chrId > 0 ? 0 : 1;
+							bool hasNext = it.hasNext;
+							if (it.Valid(minBlockSize) && !hasNext)
+							{
+								ReportBlock(blocksInstance, chrId, k, blocksFound, it);
+							}
+
+							instance[strand][chrId].Erase(&it, it.idx);
+						}
+						
+						purge_.front()->clear();
+						pool_.push_back(purge_.front());
+						purge_.pop_front();
 					}
-					
-					instance[strand][chrId].Erase(&it, it.idx);
-					purge_.pop_front();
+					else
+					{
+						break;
+					}
 				}
 				else
 				{
-					break;
-				}
+					pool_.push_back(purge_.front());
+					purge_.pop_front();
+				}								
 			}
 		}
 
@@ -91,19 +104,27 @@ namespace Sibelia
 			std::vector<BlockInstance> & blocksInstance,
 			std::vector<std::vector<InstanceSet> > & instance)
 		{
+			for (size_t i = 0; i < maxBranchSize + 1; i++)
+			{
+				pool_.push_back(new std::vector<Instance>());
+				pool_.back()->reserve(storage.GetAbundance());
+			}
+
 			size_t maxSet = 0;
 			JunctionStorage::Iterator successor[2];
 			for (auto it = start_; it.Valid(); it.Inc())
 			{
 				auto jt = it;
+				purge_.push_back(pool_.back());
+				pool_.pop_back();
 				for (jt.Next(); jt.Valid(); jt.Next())
 				{
 					Instance bestPrev;
 					bool found = false;
 					size_t idx = jt.GetIndex();
-					int64_t chrId = jt.GetChrId();
+					int32_t chrId = jt.GetChrId();
 					size_t strand = jt.IsPositiveStrand() ? 0 : 1;
-					auto kt = instance[strand][chrId].Retreive(storage, maxBranchSize, idx, jt.IsPositiveStrand());
+					auto kt = instance[strand][chrId].Retreive(storage, purge_, maxBranchSize, start_.GetChrId(), idx, jt.IsPositiveStrand());
 					if (kt != 0)
 					{
 						successor[0] = it;							
@@ -118,14 +139,14 @@ namespace Sibelia
 
 					if (!found)
 					{
-						purge_.push_back(Instance(it, jt));
-						instance[strand][chrId].Add(&purge_.back(), idx);
+						purge_.back()->push_back(Instance(it, jt));
+						instance[strand][chrId].Add(&purge_.back()->back(), idx);
 					}
 					else
 					{
 						Instance newUpdate(bestPrev, it, jt);
-						purge_.push_back(newUpdate);
-						instance[strand][chrId].Add(&purge_.back(), idx);
+						purge_.back()->push_back(newUpdate);
+						instance[strand][chrId].Add(&purge_.back()->back(), idx);
 					}
 				}
 
@@ -133,12 +154,17 @@ namespace Sibelia
 			}
 
 			Purge(INT32_MAX, k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance);
+			for (auto pt : pool_)
+			{
+				delete pt;
+			}
 		}
 
 
 	private:
 		JunctionStorage::Iterator start_;
-		std::deque<Instance> purge_;
+		std::deque<std::vector<Instance>* > purge_;
+		std::vector<std::vector<Instance>* > pool_;
 
 		bool Compatible(const Instance & inst, int64_t chrId1, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{

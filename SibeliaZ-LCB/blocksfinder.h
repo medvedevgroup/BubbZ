@@ -215,7 +215,7 @@ namespace Sibelia
 				{
 					for (size_t j = 0; j < finder.storage_.GetChrNumber(); j++)
 					{
-						instance[i][j].Init(finder.storage_.GeChrSize(j));
+						instance[i][j].Init(j, i == 0, finder.storage_.GeChrSize(j));
 					}
 				}
 
@@ -250,37 +250,14 @@ namespace Sibelia
 		};
 		
 
+
 		void GenerateOutput(const std::string & outDir, bool genSeq, bool legacyOut)
 		{
 			const auto & trimmedBlocks = blocksInstance_;
-			/*
-			std::vector<std::vector<bool> > covered(storage_.GetChrNumber());
-			for (size_t i = 0; i < covered.size(); i++)
-			{
-				covered[i].assign(storage_.GetChrSequence(i).size() + 1, false);
-			}
-
-			for (auto & b : blocksInstance_)
-			{
-				for (size_t i = b.GetStart(); i < b.GetEnd(); i++)
-				{
-					covered[b.GetChrId()][i] = true;
-				}
-			}
-
-			size_t total = 0;
-			size_t totalCovered = 0;
-			for (auto & chr : covered)
-			{
-				total += chr.size();
-				totalCovered += std::count(chr.begin(), chr.end(), true);
-			}
-			*/
 
 			std::cout.setf(std::cout.fixed);
 			std::cout.precision(2);
 			std::cout << "Blocks found: " << blocksFound_ << std::endl;
-			//std::cout << "Coverage: " << double(totalCovered) / total << std::endl;
 
 			CreateOutDirectory(outDir);
 			std::string blocksDir = outDir + "/blocks";
