@@ -1,6 +1,7 @@
 #ifndef _PATH_H_
 #define _PATH_H_
 
+#include <map>
 #include <set>
 #include <cassert>
 #include <algorithm>
@@ -8,7 +9,7 @@
 
 
 #ifdef _MSC_VER
-	#include <intrin.h>
+#include <intrin.h>
 #else
 
 #endif
@@ -49,7 +50,7 @@ namespace Sibelia
 			endIdx[0] = it.GetPosition();
 			endIdx[1] = jt.GetPosition();
 			parallelEnd = it.GetChar() == jt.GetChar();
-			
+
 			idx = jt.GetIndex();
 			chrId = jt.IsPositiveStrand() ? (jt.GetChrId() + 1) : -(jt.GetChrId() + 1);
 		}
@@ -101,24 +102,21 @@ namespace Sibelia
 
 		}
 
-		void Init(size_t chr1, bool isPositiveStrand, size_t chrSize)
+		void Init(size_t chrSize)
 		{
-			chr1_ = chr1;
-			isPositiveStrand_ = isPositiveStrand;
-			instance_.resize(chrSize, 0);
 			isActive_.resize((chrSize >> 6) + 1, false);
 		}
 
 		void Add(Instance * inst, size_t idx)
 		{
-		instance_[idx] = inst;
-		uint64_t bit;
-		uint64_t element;
-		GetCoord(idx, element, bit);
-		isActive_[element] |= uint64_t(1) << uint64_t(bit);
+			instance_[idx] = inst;
+			uint64_t bit;
+			uint64_t element;
+			GetCoord(idx, element, bit);
+			isActive_[element] |= uint64_t(1) << uint64_t(bit);
 		}
 
-		Instance* Retreive(const JunctionStorage & storage, std::deque<std::pair<size_t, std::vector<Instance>* > > & q, int32_t maxBranchSize, size_t chr0, size_t chr0Bound, int32_t idx, bool isPositive)
+		Instance* Retreive(const JunctionStorage & storage, int32_t maxBranchSize, int32_t idx, bool isPositive)
 		{
 			uint64_t bit;
 			uint64_t element;
@@ -138,7 +136,7 @@ namespace Sibelia
 
 					if (mask != 0)
 					{
-						return GetInstanceBefore(storage, q, chr0, chr0Bound, e, mask);
+						return GetInstanceBefore(e, mask);
 					}
 				}
 			}
@@ -156,7 +154,7 @@ namespace Sibelia
 
 					if (mask != 0)
 					{
-						return GetInstanceAfter(storage, q, chr0, chr0Bound, e, mask);
+						return GetInstanceAfter(e, mask);
 					}
 				}
 
@@ -167,9 +165,10 @@ namespace Sibelia
 
 		void Erase(Instance * inst, size_t idx)
 		{
-			if (instance_[idx] == inst)
+			auto it = instance_.find(idx);
+			if (it->second == inst)
 			{
-				instance_[idx] = 0;
+				instance_.erase(it);
 				uint64_t bit;
 				uint64_t element;
 				GetCoord(idx, element, bit);
@@ -178,82 +177,27 @@ namespace Sibelia
 		}
 
 	private:
-		size_t chr1_;
-		bool isPositiveStrand_;
 		std::vector<uint64_t> isActive_;
-		std::vector<Instance*> instance_;
+		std::map<size_t, Instance*> instance_;
 
-		Instance* GetMagicIndex(const JunctionStorage & storage, std::deque<std::pair<size_t, std::vector<Instance>* > > & q, size_t chr0, size_t chr0Bound, size_t chr1Idx) const
-		{
-			int64_t vid = storage.GetVertexId(chr1_, chr1Idx);
-			if (isPositiveStrand_)
-			{
-				vid = -vid;
-			}
-
-			size_t pointerChr0Idx;
-			size_t pointerChr1Idx;
-			auto & pointer = storage.Pointers(vid);
-			for (size_t i = 0; i < pointer.size(); i++)
-			{
-				if (abs(pointer[i].chrId) == chr0 && pointer[i].idx <= chr0Bound)
-				{
-					pointerChr0Idx = i;
-				}
-
-				if (abs(pointer[i].chrId) == chr1_ && pointer[i].idx == chr1Idx)
-				{
-					pointerChr1Idx = i;
-				}
-			}
-
-			auto qIndex = pointer[pointerChr0Idx].idx - q.front().first;
-			auto iIndex = pointerChr1Idx - pointerChr0Idx - 1;
-			if (iIndex >= q[qIndex].second->size())
-			{
-				return 0;
-			}
-
-			auto & val = (*q[qIndex].second)[iIndex];
-			if (val.IsPositiveStrand() != isPositiveStrand_ || abs(val.chrId) - 1 != chr1_)
-			{
-				return 0;
-			}
-
-			return &val;
-		}
-
-		Instance* GetInstanceBefore(const JunctionStorage & storage, std::deque<std::pair<size_t, std::vector<Instance>* > > & q, size_t chr0, size_t chr0Bound, uint64_t element, uint64_t mask)
+		Instance* GetInstanceBefore(uint64_t element, uint64_t mask)
 		{
 #ifdef _MSC_VER
 			uint64_t bit = 64 - __lzcnt64(mask);
 #else
 			uint64_t bit = 64 - __builtin_clzll(mask);
 #endif
-			auto idx = (element << 6) | (bit - 1);
-			/*
-			if (GetMagicIndex(storage, q, chr0, chr0Bound, idx) != instance_[idx])
-			{
-				GetMagicIndex(storage, q, chr0, chr0Bound, idx);
-//				abort();
-			}
-
-			//assert(GetMagicIndex(storage, q, chr0, chr0Bound, idx) == instance_[idx]);
-
-			//return instance_[idx];
-			*/
-			return GetMagicIndex(storage, q, chr0, chr0Bound, idx);
+			return instance_[(element << 6) | (bit - 1)];
 		}
 
-		Instance* GetInstanceAfter(const JunctionStorage & storage, std::deque<std::pair<size_t, std::vector<Instance>* > > & q, size_t chr0, size_t chr0Bound, uint64_t element, uint64_t mask)
+		Instance* GetInstanceAfter(uint64_t element, uint64_t mask)
 		{
 #ifdef _MSC_VER
 			uint64_t bit = _tzcnt_u64(mask);
 #else
 			uint64_t bit = __builtin_ctzll(mask);
 #endif
-			auto idx = (element << 6) | bit;
-			return GetMagicIndex(storage, q, chr0, chr0Bound, idx);
+			return instance_[(element << 6) | bit];
 		}
 
 		void GetCoord(uint64_t idx, uint64_t & element, uint64_t & bit) const

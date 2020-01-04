@@ -18,7 +18,7 @@ namespace Sibelia
 	using std::min;
 	using std::max;
 
-	
+
 	class JunctionStorage
 	{
 	private:
@@ -58,7 +58,7 @@ namespace Sibelia
 		class Iterator
 		{
 		public:
-			Iterator(): chrId_(SIZE_MAX)
+			Iterator() : chrId_(SIZE_MAX)
 			{
 
 			}
@@ -229,7 +229,7 @@ namespace Sibelia
 				{
 					prevPos.resize(absId + 1);
 				}
-			
+
 				{
 					auto chr = junction.GetChr();
 					auto pos = junction.GetPos();
@@ -259,7 +259,7 @@ namespace Sibelia
 					}
 					else
 					{
-						if(absId >= pointer_.size())
+						if (absId >= pointer_.size())
 						{
 							pointer_.resize(absId + 1);
 						}
