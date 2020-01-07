@@ -52,7 +52,8 @@ namespace Sibelia
 
 		}
 
-		void Purge(int32_t lastPos,
+		void Purge(JunctionStorage & storage,
+			int32_t lastPos,
 			int64_t k,
 			std::atomic<int64_t> & blocksFound,
 			std::vector<BlockInstance> & blocksInstance,
@@ -77,7 +78,7 @@ namespace Sibelia
 								ReportBlock(blocksInstance, chrId, k, blocksFound, it);
 							}
 
-							instance[strand][chrId].Erase(&it, it.idx);
+							instance[strand][chrId].Erase(&it, storage, lastPosEntry_, lastNegEntry_, maxBranchSize, start_.GetChrId(), it.idx);
 						}
 						
 
@@ -156,10 +157,10 @@ namespace Sibelia
 				}
 
 				NotifyPush(purge_.back().first, purge_.back().second);
-				Purge(it.GetPosition(), k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance);
+				Purge(storage, it.GetPosition(), k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance);
 			}
 
-			Purge(INT32_MAX, k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance);
+			Purge(storage, INT32_MAX, k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance);
 			for (auto pt : pool_)
 			{
 				delete pt;

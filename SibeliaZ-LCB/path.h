@@ -117,13 +117,13 @@ namespace Sibelia
 		{
 			chr1_ = chr1;
 			isPositiveStrand_ = isPositiveStrand;
-			instance_.resize(chrSize, 0);
+		//	instance_.resize(chrSize, 0);
 			isActive_.resize((chrSize >> 6) + 1, false);
 		}
 
 		void Add(Instance * inst, size_t idx)
 		{
-			instance_[idx] = inst;
+		//	instance_[idx] = inst;
 			uint64_t bit;
 			uint64_t element;
 			GetCoord(idx, element, bit);
@@ -176,14 +176,15 @@ namespace Sibelia
 			return 0;
 		}
 
-		void Erase(Instance * inst, size_t idx)
+		void Erase(Instance * inst, const JunctionStorage & storage, std::vector<std::vector<Instance>* >& lastPosEntry, std::vector<std::vector<Instance>* > &lastNegEntry, int32_t maxBranchSize, size_t chr0, int32_t chr1idx)
 		{
-			if (instance_[idx] == inst)
+			auto * currentInst = Retreive(storage, lastPosEntry, lastNegEntry, maxBranchSize, chr0, chr1idx);
+			if (currentInst == inst)
 			{
-				instance_[idx] = 0;
+				//instance_[idx] = 0;
 				uint64_t bit;
 				uint64_t element;
-				GetCoord(idx, element, bit);
+				GetCoord(chr1idx, element, bit);
 				isActive_[element] &= ~(uint64_t(1) << bit);
 			}
 		}
@@ -194,7 +195,7 @@ namespace Sibelia
 		size_t chr1_;
 		bool isPositiveStrand_;
 		std::vector<uint64_t> isActive_;
-		std::vector<Instance*> instance_;
+		//std::vector<Instance*> instance_;
 		
 
 		Instance* GetMagicIndex(const JunctionStorage & storage, std::vector<std::vector<Instance>* > & lastPosEntry, std::vector<std::vector<Instance>* > & lastNegEntry, size_t chr0, size_t chr1Idx) const
