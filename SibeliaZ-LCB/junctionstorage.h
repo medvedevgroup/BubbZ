@@ -18,7 +18,7 @@ namespace Sibelia
 	using std::min;
 	using std::max;
 
-
+	
 	class JunctionStorage
 	{
 	private:
@@ -58,7 +58,7 @@ namespace Sibelia
 		class Iterator
 		{
 		public:
-			Iterator() : chrId_(SIZE_MAX)
+			Iterator(): chrId_(SIZE_MAX)
 			{
 
 			}
@@ -113,6 +113,15 @@ namespace Sibelia
 				return -(JunctionStorage::this_->position_[GetChrId()][idx_ + 1].pos + JunctionStorage::this_->k_);
 			}
 
+			int32_t GetVertexId() const
+			{
+				if (IsPositiveStrand())
+				{
+					return JunctionStorage::this_->position_[GetChrId()][idx_].vertexId;
+				}
+
+				return -JunctionStorage::this_->position_[GetChrId()][idx_].vertexId;
+			}
 
 			int32_t GetPosition() const
 			{
@@ -171,6 +180,10 @@ namespace Sibelia
 			return position_[chr][idx].vertexId;
 		}
 
+		int64_t GetMaxVertexId() const
+		{
+			return pointer_.size() + 1;
+		}
 
 		int64_t GetPosition(size_t chr, size_t idx) const
 		{
@@ -229,7 +242,7 @@ namespace Sibelia
 				{
 					prevPos.resize(absId + 1);
 				}
-
+			
 				{
 					auto chr = junction.GetChr();
 					auto pos = junction.GetPos();
@@ -259,7 +272,7 @@ namespace Sibelia
 					}
 					else
 					{
-						if (absId >= pointer_.size())
+						if(absId >= pointer_.size())
 						{
 							pointer_.resize(absId + 1);
 						}

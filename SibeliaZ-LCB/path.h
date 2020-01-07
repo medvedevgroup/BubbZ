@@ -1,7 +1,6 @@
 #ifndef _PATH_H_
 #define _PATH_H_
 
-#include <map>
 #include <set>
 #include <cassert>
 #include <algorithm>
@@ -9,7 +8,7 @@
 
 
 #ifdef _MSC_VER
-#include <intrin.h>
+	#include <intrin.h>
 #else
 
 #endif
@@ -26,6 +25,11 @@ namespace Sibelia
 		int32_t startIdx[2];
 
 		Instance() : hasNext(false), parallelEnd(false)//, score(1)
+		{
+
+		}
+
+		Instance(int32_t chrId, int32_t idx) : chrId(chrId), idx(idx)
 		{
 
 		}
@@ -50,7 +54,7 @@ namespace Sibelia
 			endIdx[0] = it.GetPosition();
 			endIdx[1] = jt.GetPosition();
 			parallelEnd = it.GetChar() == jt.GetChar();
-
+			
 			idx = jt.GetIndex();
 			chrId = jt.IsPositiveStrand() ? (jt.GetChrId() + 1) : -(jt.GetChrId() + 1);
 		}
@@ -72,7 +76,14 @@ namespace Sibelia
 
 		bool operator < (const Instance & cmp) const
 		{
-			return endIdx[1] < cmp.endIdx[1];
+			auto id1 = abs(chrId);
+			auto id2 = abs(cmp.chrId);
+			if (id1 != id2)
+			{
+				return id1 < id2;
+			}
+
+			return idx < cmp.idx;
 		}
 
 		bool operator == (const Instance & cmp) const
@@ -102,8 +113,11 @@ namespace Sibelia
 
 		}
 
-		void Init(size_t chrSize)
+		void Init(size_t chr1, bool isPositiveStrand, size_t chrSize)
 		{
+			chr1_ = chr1;
+			isPositiveStrand_ = isPositiveStrand;
+			instance_.resize(chrSize, 0);
 			isActive_.resize((chrSize >> 6) + 1, false);
 		}
 
@@ -116,13 +130,13 @@ namespace Sibelia
 			isActive_[element] |= uint64_t(1) << uint64_t(bit);
 		}
 
-		Instance* Retreive(const JunctionStorage & storage, int32_t maxBranchSize, int32_t idx, bool isPositive)
+		Instance* Retreive(const JunctionStorage & storage, std::vector<std::vector<Instance>* >& lastPosEntry, std::vector<std::vector<Instance>* > &lastNegEntry, int32_t maxBranchSize, size_t chr0, int32_t chr1idx)
 		{
 			uint64_t bit;
 			uint64_t element;
-			GetCoord(idx, element, bit);
+			GetCoord(chr1idx, element, bit);
 			int32_t maxBranchSizeElement = (maxBranchSize >> 6) + 1;
-			if (isPositive)
+			if (isPositiveStrand_)
 			{
 				int32_t elementLimit = max(0, int32_t(element) - maxBranchSizeElement);
 				for (int32_t e = element; e >= elementLimit; e--)
@@ -136,7 +150,7 @@ namespace Sibelia
 
 					if (mask != 0)
 					{
-						return GetInstanceBefore(e, mask);
+						return GetInstanceBefore(storage, lastPosEntry, lastNegEntry, chr0, e, mask);
 					}
 				}
 			}
@@ -154,10 +168,9 @@ namespace Sibelia
 
 					if (mask != 0)
 					{
-						return GetInstanceAfter(e, mask);
+						return GetInstanceAfter(storage, lastPosEntry, lastNegEntry, chr0, e, mask);
 					}
 				}
-
 			}
 
 			return 0;
@@ -165,10 +178,9 @@ namespace Sibelia
 
 		void Erase(Instance * inst, size_t idx)
 		{
-			auto it = instance_.find(idx);
-			if (it->second == inst)
+			if (instance_[idx] == inst)
 			{
-				instance_.erase(it);
+				instance_[idx] = 0;
 				uint64_t bit;
 				uint64_t element;
 				GetCoord(idx, element, bit);
@@ -176,28 +188,53 @@ namespace Sibelia
 			}
 		}
 
-	private:
-		std::vector<uint64_t> isActive_;
-		std::map<size_t, Instance*> instance_;
+		
 
-		Instance* GetInstanceBefore(uint64_t element, uint64_t mask)
+	private:
+		size_t chr1_;
+		bool isPositiveStrand_;
+		std::vector<uint64_t> isActive_;
+		std::vector<Instance*> instance_;
+		
+
+		Instance* GetMagicIndex(const JunctionStorage & storage, std::vector<std::vector<Instance>* > & lastPosEntry, std::vector<std::vector<Instance>* > & lastNegEntry, size_t chr0, size_t chr1Idx) const
+		{
+			int64_t vid = storage.GetVertexId(chr1_, chr1Idx);
+			if (!isPositiveStrand_)
+			{
+				vid = -vid;
+			}
+
+			std::vector<Instance>* instance = vid > 0 ? lastPosEntry[vid] : lastNegEntry[-vid];
+			if (instance == 0)
+			{
+				return 0;
+			}
+
+			auto & val = *std::lower_bound(instance->begin(), instance->end(), Instance(chr1_ + 1, chr1Idx));
+			return &val;
+		}
+
+		Instance* GetInstanceBefore(const JunctionStorage & storage, std::vector<std::vector<Instance>* >& lastPosEntry, std::vector<std::vector<Instance>* > &lastNegEntry, size_t chr0, uint64_t element, uint64_t mask)
 		{
 #ifdef _MSC_VER
 			uint64_t bit = 64 - __lzcnt64(mask);
 #else
 			uint64_t bit = 64 - __builtin_clzll(mask);
 #endif
-			return instance_[(element << 6) | (bit - 1)];
+			auto idx = (element << 6) | (bit - 1);
+			return GetMagicIndex(storage, lastPosEntry, lastNegEntry, chr0, idx);
 		}
 
-		Instance* GetInstanceAfter(uint64_t element, uint64_t mask)
+		Instance* GetInstanceAfter(const JunctionStorage & storage, std::vector<std::vector<Instance>* > &lastPosEntry, std::vector<std::vector<Instance>* >& lastNegEntry, size_t chr0, uint64_t element, uint64_t mask)
 		{
 #ifdef _MSC_VER
 			uint64_t bit = _tzcnt_u64(mask);
 #else
 			uint64_t bit = __builtin_ctzll(mask);
 #endif
-			return instance_[(element << 6) | bit];
+			auto idx = (element << 6) | bit;
+			return GetMagicIndex(storage, lastPosEntry, lastNegEntry, chr0, idx);
 		}
 
 		void GetCoord(uint64_t idx, uint64_t & element, uint64_t & bit) const

@@ -99,7 +99,7 @@ namespace Sibelia
 		struct FancyIterator : public std::iterator<std::forward_iterator_tag, ReturnType>
 		{
 		public:
-			FancyIterator & operator++()
+			FancyIterator& operator++()
 			{
 				++it;
 				return *this;
@@ -184,7 +184,7 @@ namespace Sibelia
 			progressCount_ = 0;
 			currentIndex_ = 0;
 			workInstance_.resize(threads);
-#pragma omp parallel num_threads(threads)
+			#pragma omp parallel num_threads(threads)
 			{
 				ChrSweep process(*this);
 				process();
@@ -210,12 +210,23 @@ namespace Sibelia
 
 			void operator()() const
 			{
-				std::vector<std::vector<std::multiset<Sweeper::Instance> > > instance(2, std::vector<std::multiset<Sweeper::Instance> >(finder.storage_.GetChrNumber()));
+				std::vector<std::vector<InstanceSet > > instance(2, std::vector<InstanceSet>(finder.storage_.GetChrNumber()));
+				for (size_t i = 0; i < 2; i++)
+				{
+					for (size_t j = 0; j < finder.storage_.GetChrNumber(); j++)
+					{
+						instance[i][j].Init(j, i == 0, finder.storage_.GeChrSize(j));
+					}
+				}
+
+				std::vector<std::vector<Instance>* > lastPosEntry_(finder.storage_.GetMaxVertexId(), 0);
+				std::vector<std::vector<Instance>* > lastNegEntry_(finder.storage_.GetMaxVertexId(), 0);
+
 				size_t endIndex = finder.storage_.GetChrNumber();
-				for (bool go = true; go;)
+				for(bool go = true; go;)
 				{
 					size_t nowChr;
-#pragma omp critical
+					#pragma omp critical
 					{
 						if (finder.currentIndex_ < endIndex)
 						{
@@ -230,39 +241,37 @@ namespace Sibelia
 					if (go)
 					{
 						auto it = JunctionStorage::Iterator(nowChr);
-						Sweeper sweeper(it);
+						Sweeper sweeper(it, lastPosEntry_, lastNegEntry_);
 						sweeper.Sweep(finder.storage_, finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.workInstance_[omp_get_thread_num()], instance);
 						{
 							std::cout << ++finder.progressCount_ << ' ' << finder.storage_.GetChrNumber() << std::endl;
 						}
 					}
-
+					
 				}
 			}
 		};
-
-
 		
 
-
-		void GenerateOutput(const std::string & outDir, bool legacyOut)
+		void GenerateOutput(const std::string & outDir, bool genSeq, bool legacyOut)
 		{
 			const auto & trimmedBlocks = blocksInstance_;
+
 			std::cout.setf(std::cout.fixed);
 			std::cout.precision(2);
 			std::cout << "Blocks found: " << blocksFound_ << std::endl;
-			//std::cout << "Coverage: " << double(totalCovered) / total << std::endl;
 
 			CreateOutDirectory(outDir);
 			std::string blocksDir = outDir + "/blocks";
 			ListBlocksIndicesGFF(trimmedBlocks, outDir + "/" + "blocks_coords.gff");
+
 			if (legacyOut)
 			{
 				ListBlocksIndices(trimmedBlocks, outDir + "/" + "blocks_coords.txt");
 			}
 		}
 
-
+	
 		template<class T> T Min(const T & a, const T & b)
 		{
 			if (a < b)
