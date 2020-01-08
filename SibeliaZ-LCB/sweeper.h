@@ -46,7 +46,7 @@ namespace Sibelia
 
 		typedef std::multiset<Instance>::iterator InstanceIt;
 
-		Sweeper(JunctionStorage::Iterator start, std::vector<std::vector<Instance>* > & lastPosEntry_, std::vector<std::vector<Instance>* > & lastNegEntry_) :
+		Sweeper(JunctionStorage::Iterator start, std::vector<VertexEntry* > & lastPosEntry_, std::vector<VertexEntry* > & lastNegEntry_) :
 			start_(start), lastPosEntry_(lastPosEntry_), lastNegEntry_(lastNegEntry_)
 		{
 
@@ -63,12 +63,12 @@ namespace Sibelia
 		{
 			while (purge_.size() > 0)
 			{
-				if (purge_.front().second->size() > 0)
+				if (purge_.front().instance->size() > 0)
 				{
-					int32_t diff = lastPos - (purge_.front().second->front().endIdx[0]);
+					int32_t diff = lastPos - (purge_.front().instance->front().endIdx[0]);
 					if (diff >= maxBranchSize)
 					{
-						for (auto & it : *purge_.front().second)
+						for (auto & it : *purge_.front().instance)
 						{
 							int64_t chrId = abs(it.chrId) - 1;
 							size_t strand = it.chrId > 0 ? 0 : 1;
@@ -82,9 +82,9 @@ namespace Sibelia
 						}
 						
 
-						NotifyPop(purge_.front().first, purge_.front().second);
-						purge_.front().second->clear();
-						pool_.push_back(purge_.front().second);
+						NotifyPop(purge_.front());
+						purge_.front().instance->clear();
+						pool_.push_back(purge_.front().instance);
 						purge_.pop_front();
 					}
 					else
@@ -94,8 +94,8 @@ namespace Sibelia
 				}
 				else
 				{
-					NotifyPop(purge_.front().first, purge_.front().second);
-					pool_.push_back(purge_.front().second);
+					NotifyPop(purge_.front());
+					pool_.push_back(purge_.front().instance);
 					purge_.pop_front();
 				}								
 			}
@@ -121,7 +121,7 @@ namespace Sibelia
 			for (auto it = start_; it.Valid(); it.Inc())
 			{
 				auto jt = it;
-				purge_.push_back(std::make_pair(it.GetVertexId(), pool_.back()));
+				purge_.push_back(VertexEntry(it.GetVertexId(), it.GetPointerIndex(), pool_.back()));
 				pool_.pop_back();
 				for (jt.Next(); jt.Valid(); jt.Next())
 				{
@@ -145,18 +145,18 @@ namespace Sibelia
 
 					if (!found)
 					{
-						purge_.back().second->push_back(Instance(it, jt));
-						instance[strand][chrId].Add(&purge_.back().second->back(), idx);
+						purge_.back().instance->push_back(Instance(it, jt));
+						instance[strand][chrId].Add(&purge_.back().instance->back(), idx);
 					}
 					else
 					{
 						Instance newUpdate(bestPrev, it, jt);
-						purge_.back().second->push_back(newUpdate);
-						instance[strand][chrId].Add(&purge_.back().second->back(), idx);
+						purge_.back().instance->push_back(newUpdate);
+						instance[strand][chrId].Add(&purge_.back().instance->back(), idx);
 					}
 				}
 
-				NotifyPush(purge_.back().first, purge_.back().second);
+				NotifyPush(purge_.back());
 				Purge(storage, it.GetPosition(), k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance);
 			}
 
@@ -170,37 +170,37 @@ namespace Sibelia
 
 	private:
 		JunctionStorage::Iterator start_;
-		std::deque<std::pair<int32_t, std::vector<Instance>* > > purge_;
+		std::deque<VertexEntry> purge_;
 		std::vector<std::vector<Instance>* > pool_;
-		std::vector<std::vector<Instance>* > & lastPosEntry_;
-		std::vector<std::vector<Instance>* > & lastNegEntry_;
+		std::vector<VertexEntry* > & lastPosEntry_;
+		std::vector<VertexEntry* > & lastNegEntry_;
 
-		void NotifyPush(int64_t vid, std::vector<Instance> * inst)
+		void NotifyPush(VertexEntry & e)
 		{
-			if (vid > 0)
+			if (e.vertexId > 0)
 			{
-				lastPosEntry_[vid] = inst;
+				lastPosEntry_[e.vertexId] = &e;
 			}
 			else
 			{
-				lastNegEntry_[-vid] = inst;
+				lastNegEntry_[-e.vertexId] = &e;
 			}
 		}
 
-		void NotifyPop(int64_t vid, std::vector<Instance> * inst)
+		void NotifyPop(VertexEntry & e)
 		{
-			if (vid > 0)
+			if (e.vertexId > 0)
 			{
-				if (lastPosEntry_[vid] == inst)
+				if (lastPosEntry_[e.vertexId] == &e)
 				{
-					lastPosEntry_[vid] = 0;
+					lastPosEntry_[e.vertexId] = 0;
 				}
 			}
 			else
 			{
-				if (lastNegEntry_[-vid] == inst)
+				if (lastNegEntry_[-e.vertexId] == &e)
 				{
-					lastNegEntry_[-vid] = 0;
+					lastNegEntry_[-e.vertexId] = 0;
 				}
 			}
 		}

@@ -105,6 +105,19 @@ namespace Sibelia
 		}
 	};
 
+	struct VertexEntry
+	{
+		int64_t vertexId;
+		uint16_t pointerIdx;
+		std::vector<Instance>* instance;
+
+		VertexEntry() {}
+		VertexEntry(int64_t vertexId, uint16_t pointerIdx, std::vector<Instance>* instance) : vertexId(vertexId), pointerIdx(pointerIdx), instance(instance)
+		{
+
+		}
+	};
+
 	class InstanceSet
 	{
 	public:
@@ -130,7 +143,7 @@ namespace Sibelia
 			isActive_[element] |= uint64_t(1) << uint64_t(bit);
 		}
 
-		Instance* Retreive(const JunctionStorage & storage, std::vector<std::vector<Instance>* >& lastPosEntry, std::vector<std::vector<Instance>* > &lastNegEntry, int32_t maxBranchSize, size_t chr0, int32_t chr1idx)
+		Instance* Retreive(const JunctionStorage & storage, std::vector<VertexEntry* >& lastPosEntry, std::vector<VertexEntry* > &lastNegEntry, int32_t maxBranchSize, size_t chr0, int32_t chr1idx)
 		{
 			uint64_t bit;
 			uint64_t element;
@@ -176,7 +189,7 @@ namespace Sibelia
 			return 0;
 		}
 
-		void Erase(Instance * inst, const JunctionStorage & storage, std::vector<std::vector<Instance>* >& lastPosEntry, std::vector<std::vector<Instance>* > &lastNegEntry, int32_t maxBranchSize, size_t chr0, int32_t chr1idx)
+		void Erase(Instance * inst, const JunctionStorage & storage, std::vector<VertexEntry* >& lastPosEntry, std::vector<VertexEntry* > &lastNegEntry, int32_t maxBranchSize, size_t chr0, int32_t chr1idx)
 		{
 			auto * currentInst = Retreive(storage, lastPosEntry, lastNegEntry, maxBranchSize, chr0, chr1idx);
 			if (currentInst == inst)
@@ -198,7 +211,7 @@ namespace Sibelia
 		//std::vector<Instance*> instance_;
 		
 
-		Instance* GetMagicIndex(const JunctionStorage & storage, std::vector<std::vector<Instance>* > & lastPosEntry, std::vector<std::vector<Instance>* > & lastNegEntry, size_t chr0, size_t chr1Idx) const
+		Instance* GetMagicIndex(const JunctionStorage & storage, std::vector<VertexEntry* > & lastPosEntry, std::vector<VertexEntry* > & lastNegEntry, size_t chr0, size_t chr1Idx) const
 		{
 			int64_t vid = storage.GetVertexId(chr1_, chr1Idx);
 			if (!isPositiveStrand_)
@@ -206,17 +219,18 @@ namespace Sibelia
 				vid = -vid;
 			}
 
-			std::vector<Instance>* instance = vid > 0 ? lastPosEntry[vid] : lastNegEntry[-vid];
-			if (instance == 0)
+			VertexEntry* e = vid > 0 ? lastPosEntry[vid] : lastNegEntry[-vid];
+			if (e == 0)
 			{
 				return 0;
 			}
 
-			auto & val = *std::lower_bound(instance->begin(), instance->end(), Instance(chr1_ + 1, chr1Idx));
+			auto chr1PointerIdx = storage.GetPointerIndex(chr1_, chr1Idx);
+			auto & val = (*e->instance)[chr1PointerIdx - e->pointerIdx - 1];
 			return &val;
 		}
 
-		Instance* GetInstanceBefore(const JunctionStorage & storage, std::vector<std::vector<Instance>* >& lastPosEntry, std::vector<std::vector<Instance>* > &lastNegEntry, size_t chr0, uint64_t element, uint64_t mask)
+		Instance* GetInstanceBefore(const JunctionStorage & storage, std::vector<VertexEntry* >& lastPosEntry, std::vector<VertexEntry* > &lastNegEntry, size_t chr0, uint64_t element, uint64_t mask)
 		{
 #ifdef _MSC_VER
 			uint64_t bit = 64 - __lzcnt64(mask);
@@ -227,7 +241,7 @@ namespace Sibelia
 			return GetMagicIndex(storage, lastPosEntry, lastNegEntry, chr0, idx);
 		}
 
-		Instance* GetInstanceAfter(const JunctionStorage & storage, std::vector<std::vector<Instance>* > &lastPosEntry, std::vector<std::vector<Instance>* >& lastNegEntry, size_t chr0, uint64_t element, uint64_t mask)
+		Instance* GetInstanceAfter(const JunctionStorage & storage, std::vector<VertexEntry* > &lastPosEntry, std::vector<VertexEntry* >& lastNegEntry, size_t chr0, uint64_t element, uint64_t mask)
 		{
 #ifdef _MSC_VER
 			uint64_t bit = _tzcnt_u64(mask);

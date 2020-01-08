@@ -29,6 +29,7 @@ namespace Sibelia
 			uint32_t nextIdx;
 			int32_t nextChr;
 			int64_t vertexId;
+			uint16_t pointerIdx;
 			char ch;
 			char revCh;
 			bool invert;
@@ -96,6 +97,11 @@ namespace Sibelia
 					chrId_ = SIZE_MAX;
 				}
 
+			}
+
+			int32_t GetPointerIndex() const
+			{
+				return JunctionStorage::this_->position_[chrId_][idx_].pointerIdx;
 			}
 
 			int32_t GetChrId() const
@@ -182,7 +188,7 @@ namespace Sibelia
 
 		int64_t GetMaxVertexId() const
 		{
-			return pointer_.size() + 1;
+			return maxId_;
 		}
 
 		int64_t GetPosition(size_t chr, size_t idx) const
@@ -190,6 +196,11 @@ namespace Sibelia
 			return position_[chr][idx].pos;
 		}
 
+
+		int32_t GetPointerIndex(size_t chr, size_t idx) const
+		{
+			return position_[chr][idx].pointerIdx;
+		}
 
 		int64_t GetChrNumber() const
 		{
@@ -215,6 +226,7 @@ namespace Sibelia
 		{
 			this_ = this;
 			size_t record = 0;
+			maxId_ = 0;
 			std::vector<std::string> sequence_(position_.size());
 			for (const auto & fastaFileName : genomesFileName)
 			{
@@ -238,6 +250,7 @@ namespace Sibelia
 			for (TwoPaCo::JunctionPosition junction; reader.NextJunctionPosition(junction);)
 			{
 				size_t absId = abs(junction.GetId());
+				maxId_ = max(absId, maxId_);
 				if (absId >= prevPos.size())
 				{
 					prevPos.resize(absId + 1);
@@ -255,31 +268,18 @@ namespace Sibelia
 						position_[prev.prevChr][prev.prevIdx].nextChr = junction.GetChr();
 						position_[prev.prevChr][prev.prevIdx].invert = prev.prevId != junction.GetId();
 						position_[prev.prevChr][prev.prevIdx].nextIdx = position_[junction.GetChr()].size() - 1;
+						position_[chr].back().pointerIdx = position_[prev.prevChr][prev.prevIdx].pointerIdx + 1;
+					}
+					else
+					{
+						position_[chr].back().pointerIdx = 0;
 					}
 
 					prevPos[absId].prevId = junction.GetId();
 					prevPos[absId].prevChr = junction.GetChr();
 					prevPos[absId].prevIdx = position_[junction.GetChr()].size() - 1;
 
-					if (junction.GetId() > 0)
-					{
-						if (absId >= pointer_.size())
-						{
-							pointer_.resize(absId + 1);
-						}
-
-						pointer_[absId].push_back(Pointer(chr, position_[junction.GetChr()].size() - 1));
-					}
-					else
-					{
-						if(absId >= pointer_.size())
-						{
-							pointer_.resize(absId + 1);
-						}
-
-						pointer_[absId].push_back(Pointer(-chr, position_[junction.GetChr()].size() - 1));
-					}
-
+		
 				}
 			}
 		}
@@ -306,11 +306,7 @@ namespace Sibelia
 			}
 		};
 
-		const std::vector<Pointer>& Pointers(int64_t vid) const
-		{
-			return pointer_[abs(vid)];
-		}
-
+		
 		JunctionStorage() {}
 		JunctionStorage(const std::string & fileName, const std::vector<std::string> & genomesFileName, uint64_t k, int64_t threads, int64_t abundanceThreshold, int64_t loopThreshold) : k_(k), abundance_(abundanceThreshold)
 		{
@@ -326,10 +322,10 @@ namespace Sibelia
 
 
 		int64_t k_;
+		size_t maxId_;
 		size_t abundance_;
 		std::map<std::string, size_t> sequenceId_;
 		std::vector<size_t> chrSeqSize_;
-		std::vector<std::vector<Pointer> > pointer_;
 		std::vector<std::string> sequenceDescription_;
 		std::vector<std::vector<Position> > position_;
 		static JunctionStorage * this_;

@@ -219,8 +219,8 @@ namespace Sibelia
 					}
 				}
 
-				std::vector<std::vector<Instance>* > lastPosEntry_(finder.storage_.GetMaxVertexId(), 0);
-				std::vector<std::vector<Instance>* > lastNegEntry_(finder.storage_.GetMaxVertexId(), 0);
+				std::vector<VertexEntry* > lastPosEntry_(finder.storage_.GetMaxVertexId() + 1, 0);
+				std::vector<VertexEntry* > lastNegEntry_(finder.storage_.GetMaxVertexId() + 1, 0);
 
 				size_t endIndex = finder.storage_.GetChrNumber();
 				for(bool go = true; go;)
