@@ -227,6 +227,7 @@ namespace Sibelia
 			this_ = this;
 			size_t record = 0;
 			maxId_ = 0;
+
 			std::vector<std::string> sequence_(position_.size());
 			for (const auto & fastaFileName : genomesFileName)
 			{
