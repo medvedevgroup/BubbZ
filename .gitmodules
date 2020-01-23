@@ -1,6 +1,3 @@
-[submodule "spoa"]
-	path = spoa
-	url = https://github.com/rvaser/spoa
 [submodule "TwoPaCo"]
 	path = TwoPaCo
 	url = https://github.com/medvedevgroup/TwoPaCo
