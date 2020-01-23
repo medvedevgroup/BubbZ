@@ -9,7 +9,7 @@ endif()
 
 set(twopaco_SOURCE_DIR ../TwoPaCo/src/common)
 include_directories(${twopaco_SOURCE_DIR})
-add_executable(bubbz sibeliaz.cpp blocksfinder.cpp ${twopaco_SOURCE_DIR}/dnachar.cpp ${twopaco_SOURCE_DIR}/streamfastaparser.cpp)
+add_executable(bubbz-map bubbz.cpp blocksfinder.cpp ${twopaco_SOURCE_DIR}/dnachar.cpp ${twopaco_SOURCE_DIR}/streamfastaparser.cpp)
 find_package(OpenMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")

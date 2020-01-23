@@ -1,3 +1,3 @@
-SibeliaZ 1.0.0
+BubbZ 1.0.0
 ==============
 * Hello, World!
