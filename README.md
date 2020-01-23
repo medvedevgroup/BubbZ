@@ -29,8 +29,10 @@ To compile the code, you need recent installations of the following software
 * Intel TBB library properly installed on your system. In other words, G++
   should be able to find TBB libs (future releases will not depend on TBB)
 
-The easiest way to install the dependencies is to use a package management
-system, for APT on Debian systems they can be installed by the following:
+Many systems will have this software already installed. If not, you will 
+need sudo priviliges to install them. The easiest way to install the 
+dependencies is to use a package management system; for APT on Debian systems
+they can be installed by the following:
 
 	sudo apt-get install git cmake g++ libtbb-dev
 
@@ -78,9 +80,9 @@ affect the accuracy and performance, they are described below.
 
 Output description
 ==================
-The output directory will contain a GFF file with coordinates of the
+The output directory will contain a GFF file called "blocks_coords.gff" with coordinates of the
 locally-collinear blocks. Lines that have identical id fields correspond
-to different copies of the same block. The file name is "blocks_coords.gff"
+to different copies of the same block.
 
 Parameters affecting accuracy
 =============================
@@ -113,7 +115,7 @@ significantly slow down the computation. The default value is 150.
 Gap size threshold
 ---------------------
 BubbZ analyzes the graph by looking for long chains of common vertices in it.
-The gap size in a chine is limited by by parameter, which can be set using:
+The gap size in a chain is limited by by parameter, which can be set using:
 
 	-b <integer>
 
