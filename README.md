@@ -178,4 +178,4 @@ E-mail your feedback at ivminkin@gmail.com.
 
 Datasets used of analyses in the paper
 ======================================
-See: https://github.com/medvedevgroup/SibeliaZ/blob/master/DATA.txt
+See: https://github.com/medvedevgroup/BubbZ/blob/master/DATA.txt
