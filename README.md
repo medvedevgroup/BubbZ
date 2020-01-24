@@ -15,9 +15,6 @@ BubbZ is a whole-genome homology mapping pipeline. BubbZ works best in the case
 when the user needs to find all (possibly overalpping) pairwise mappings in a 
 collection of genomes. The mappings are output in GFF format.
 
-Currently BubbZ does not support chromosomes in the input longer than
-4294967296 bp, this will be fixed in the future releases.
-
 Compilation and installation
 ============================
 To compile the code, you need recent installations of the following software
@@ -113,7 +110,8 @@ significantly slow down the computation. The default value is 150.
 Gap size threshold
 ---------------------
 BubbZ analyzes the graph by looking for long chains of common vertices in it.
-The gap size in a chine is limited by by parameter, which can be set using:
+The gap size in a chain is limited by a parameter measured in the number of
+basepairs, which can be set using:
 
 	-b <integer>
 
@@ -122,7 +120,8 @@ sequences, but if -b is too high, it will decrease accuracy as well.
 
 Mapping block size
 ----------------------------
-BubbZ only output blocks longer than a specified threshold, which is set by
+BubbZ only output blocks longer than a specified threshold in basepairs, which
+is set by:
 
 	-m <integer>
 
@@ -166,11 +165,25 @@ lowercase characters), so please convert soft-masked repeats to hard-maksed ones
 necessary as BubbZ uses the abundance parameter -a to filter out high-copy
 repeats.
 
+Input length
+============
+Currently BubbZ does not support chromosomes in the input longer than
+4294967296 bp, this will be fixed in the future releases. The total
+length of the input is not limited.
+
+Citation
+========
+If you use SibeliaZ in your research, please cite:
+
+	Scalable pairwise whole-genome homology mapping of largegenomes with BubbZ
+	Ilia Minkin, Paul Medvedev
+	Under review
+
 License
 =======
 See LICENSE.txt
 
-Contacts
+Contact
 ========
 E-mail your feedback at ivminkin@gmail.com.
 
