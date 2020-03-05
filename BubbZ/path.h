@@ -21,10 +21,11 @@ namespace Sibelia
 		bool parallelEnd;
 		int32_t idx;
 		int32_t chrId;
+		int32_t score;
 		int32_t endIdx[2];
 		int32_t startIdx[2];
 
-		Instance() : hasNext(false), parallelEnd(false)//, score(1)
+		Instance() : hasNext(false), parallelEnd(false), score(1)
 		{
 
 		}
@@ -47,7 +48,7 @@ namespace Sibelia
 			return true;
 		}
 
-		Instance(const Instance & inst, JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt) : hasNext(false)
+		Instance(const Instance & inst, JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt) : hasNext(false), score(inst.score + 1)
 		{
 			startIdx[0] = inst.startIdx[0];
 			startIdx[1] = inst.startIdx[1];
@@ -130,13 +131,11 @@ namespace Sibelia
 		{
 			chr1_ = chr1;
 			isPositiveStrand_ = isPositiveStrand;
-		//	instance_.resize(chrSize, 0);
 			isActive_.resize((chrSize >> 6) + 1, false);
 		}
 
 		void Add(Instance * inst, size_t idx)
 		{
-		//	instance_[idx] = inst;
 			uint64_t bit;
 			uint64_t element;
 			GetCoord(idx, element, bit);
@@ -257,8 +256,6 @@ namespace Sibelia
 			bit = idx & ((uint64_t(1) << uint64_t(6)) - 1);
 			element = idx >> 6;
 		}
-
-
 	};
 }
 
