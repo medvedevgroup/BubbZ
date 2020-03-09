@@ -130,17 +130,14 @@ namespace Sibelia
 					size_t idx = jt.GetIndex();
 					int32_t chrId = jt.GetChrId();
 					size_t strand = jt.IsPositiveStrand() ? 0 : 1;
-					auto kt = instance[strand][chrId].Retreive(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, start_.GetChrId(), idx);
+					successor[0] = it;
+					successor[1] = jt;
+					auto kt = instance[strand][chrId].RetreiveBest(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, successor);
 					if (kt != 0)
 					{
-						successor[0] = it;							
-						successor[1] = jt;
-						if (Compatible(*kt, chrId, successor, maxBranchSize))
-						{
-							const_cast<Instance&>(*kt).hasNext = true;
-							bestPrev = *kt;
-							found = true;
-						}
+						const_cast<Instance&>(*kt).hasNext = true;
+						bestPrev = *kt;
+						found = true;
 					}
 
 					if (!found)
@@ -203,42 +200,6 @@ namespace Sibelia
 					lastNegEntry_[-e.vertexId] = 0;
 				}
 			}
-		}
-
-		bool Compatible(const Instance & inst, int64_t chrId1, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
-		{
-			bool withinBubble = true;
-			int64_t chrId0 = start_.GetChrId();
-			bool validSuccessor = inst.parallelEnd;
-			for (size_t i = 0; i < 2; i++)
-			{
-				if (inst.endIdx[i] != succ[i].PreviousPosition())
-				{					
-					validSuccessor = false;
-				}
-
-				if (abs(inst.endIdx[i] - succ[i].GetPosition()) >= maxBranchSize)
-				{					
-					withinBubble = false;
-				}
-			}
-			
-			if (withinBubble || validSuccessor)
-			{
-				if(chrId0 == chrId1)
-				{
-					size_t startIdx2 = min(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-					size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-					if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
-					{					
-						return false;
-					}
-				}
-
-				return true;
-			}
-			
-			return false;
 		}
 
 		void ReportBlock(std::vector<BlockInstance> & blocksInstance, int64_t chrId1, int64_t k, std::atomic<int64_t> & blocksFound, const Instance & inst)
