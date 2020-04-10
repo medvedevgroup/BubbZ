@@ -195,9 +195,10 @@ namespace Sibelia
 			bool validSuccessor = inst.parallelEnd;
 			for (size_t i = 0; i < 2; i++)
 			{
+				edgeLength = abs(inst.endIdx[i] - succ[i].GetPosition());
+
 				if (inst.endIdx[i] != succ[i].PreviousPosition())
 				{
-					edgeLength = abs(inst.endIdx[i] - succ[i].GetPosition());
 					validSuccessor = false;
 				}
 
