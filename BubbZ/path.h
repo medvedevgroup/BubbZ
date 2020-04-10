@@ -188,14 +188,16 @@ namespace Sibelia
 			return 0;
 		}
 
-		bool Compatible(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
+		int64_t Compatible(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{
+			int64_t edgeLength = 0;
 			bool withinBubble = true;
 			bool validSuccessor = inst.parallelEnd;
 			for (size_t i = 0; i < 2; i++)
 			{
 				if (inst.endIdx[i] != succ[i].PreviousPosition())
 				{
+					edgeLength = abs(inst.endIdx[i] - succ[i].GetPosition());
 					validSuccessor = false;
 				}
 
@@ -217,72 +219,27 @@ namespace Sibelia
 					}
 				}
 
-				return true;
-			}
 
-			return false;
-		}
-/*
-		Instance* RetreiveBest(const JunctionStorage & storage, std::vector<VertexEntry* >& lastPosEntry, std::vector<VertexEntry* > &lastNegEntry, int32_t maxBranchSize, const JunctionStorage::Iterator succ[2])
-		{
-			uint64_t bit;
-			uint64_t element;
-			GetCoord(succ[1].GetIndex(), element, bit);
-			int32_t maxBranchSizeElement = (maxBranchSize >> 6) + 1;
-			if (isPositiveStrand_)
-			{
-				int32_t elementLimit = max(0, int32_t(element) - maxBranchSizeElement);
-				for (int32_t e = element; e >= elementLimit; e--)
+				if (withinBubble)
 				{
-					auto mask = isActive_[e];
-					if (e == element && bit < 63)
-					{
-						auto application = (uint64_t(1) << (bit + uint64_t(1)));
-						mask = mask & (application - uint64_t(1));
-					}
-
-					if (mask != 0)
-					{
-#ifdef _MSC_VER
-							uint64_t bit = 64 - __lzcnt64(mask);
-#else
-							uint64_t bit = 64 - __builtin_clzll(mask);
-#endif
-							auto idx = (e << 6) | (bit - 1);
-							return GetMagicIndex(storage, lastPosEntry, lastNegEntry, succ[0].GetChrId(), idx);
-
-							//return GetInstanceBefore(storage, lastPosEntry, lastNegEntry, succ[0].GetChrId(), e, mask);
-					}
+					return 1;
 				}
-			}
-			else
-			{
-				int32_t elementLimit = min(int32_t(isActive_.size()), int32_t(element) + maxBranchSizeElement);
-				for (int32_t e = element; e < elementLimit; e++)
+				else
 				{
-					auto mask = isActive_[e];
-					if (e == element)
-					{
-						auto application = (uint64_t(1) << bit) - uint64_t(1);
-						mask = mask & (~application);
-					}
-
-					if (mask != 0)
-					{
-						return GetInstanceAfter(storage, lastPosEntry, lastNegEntry, succ[0].GetChrId(), e, mask);
-					}
+					return edgeLength;
 				}
 			}
 
 			return 0;
 		}
-*/
 
-		Instance* RetreiveBest(const JunctionStorage & storage, std::vector<VertexEntry* >& lastPosEntry, std::vector<VertexEntry* > &lastNegEntry, int32_t maxBranchSize, const JunctionStorage::Iterator succ[2])
+		std::pair<Instance*, int64_t> RetreiveBest(const JunctionStorage & storage, std::vector<VertexEntry* >& lastPosEntry, std::vector<VertexEntry* > &lastNegEntry, int32_t maxBranchSize, const JunctionStorage::Iterator succ[2])
 		{
 			uint64_t bit;
 			uint64_t element;
 			Instance* ret = 0;
+			int64_t bestScore = 0;
+
 			GetCoord(succ[1].GetIndex(), element, bit);
 			int32_t maxBranchSizeElement = (maxBranchSize >> 6) + 1;
 			if (isPositiveStrand_)
@@ -311,9 +268,11 @@ namespace Sibelia
 						auto inst = GetMagicIndex(storage, lastPosEntry, lastNegEntry, succ[0].GetChrId(), idx);
 						if (inst != 0)
 						{
-							if (Compatible(*inst, succ, maxBranchSize) && (ret == 0 || inst->score > ret->score))
+							auto gapScore = Compatible(*inst, succ, maxBranchSize);
+							if (gapScore > 0 && (ret == 0 || (inst->score + gapScore > bestScore)))
 							{
 								ret = inst;
+								bestScore = inst->score + gapScore;
 							}
 
 							if (succ[1].GetPosition() - inst->endIdx[1] >= maxBranchSize)
@@ -352,9 +311,11 @@ namespace Sibelia
 						auto inst = GetMagicIndex(storage, lastPosEntry, lastNegEntry, succ[0].GetChrId(), idx);
 						if (inst != 0)
 						{
-							if (Compatible(*inst, succ, maxBranchSize) && (ret == 0 || inst->score > ret->score))
+							auto gapScore = Compatible(*inst, succ, maxBranchSize);
+							if (gapScore > 0 && (ret == 0 || (inst->score + gapScore > bestScore)))
 							{
 								ret = inst;
+								bestScore = inst->score + gapScore;
 							}
 
 							if (inst->endIdx[1] - succ[1].GetPosition() >= maxBranchSize)
@@ -368,7 +329,7 @@ namespace Sibelia
 				}
 			}
 
-			return ret;
+			return std::make_pair(ret, bestScore);
 		}
 
 		void Erase(Instance * inst, const JunctionStorage & storage, std::vector<VertexEntry* >& lastPosEntry, std::vector<VertexEntry* > &lastNegEntry, int32_t maxBranchSize, size_t chr0, int32_t chr1idx)

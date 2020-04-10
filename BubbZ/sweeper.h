@@ -101,41 +101,6 @@ namespace Sibelia
 			}
 		}
 
-		bool Compatible(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
-		{
-			bool withinBubble = true;
-			bool validSuccessor = inst.parallelEnd;
-			for (size_t i = 0; i < 2; i++)
-			{
-				if (inst.endIdx[i] != succ[i].PreviousPosition())
-				{
-					validSuccessor = false;
-				}
-
-				if (abs(inst.endIdx[i] - succ[i].GetPosition()) >= maxBranchSize)
-				{
-					withinBubble = false;
-				}
-			}
-
-			if (withinBubble || validSuccessor)
-			{
-				if (succ[0].GetChrId() == succ[1].GetChrId())
-				{
-					size_t startIdx2 = min(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-					size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-					if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
-					{
-						return false;
-					}
-				}
-
-				return true;
-			}
-
-			return false;
-		}
-
 		void Sweep(JunctionStorage & storage,
 			int64_t minBlockSize,
 			int64_t maxBranchSize,
@@ -160,8 +125,6 @@ namespace Sibelia
 				pool_.pop_back();
 				for (jt.Next(); jt.Valid(); jt.Next())
 				{
-					Instance bestPrev;
-					bool found = false;
 					size_t idx = jt.GetIndex();
 					int32_t chrId = jt.GetChrId();
 					size_t strand = jt.IsPositiveStrand() ? 0 : 1;
@@ -169,42 +132,20 @@ namespace Sibelia
 					successor[1] = jt;
 
 					auto kt = instance[strand][chrId].RetreiveBest(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, successor);
-					if (kt != 0)
+					if (kt.first != 0)
 					{
-					//	if (Compatible(*kt, successor, maxBranchSize))
-						{
-							const_cast<Instance&>(*kt).hasNext = true;
-							bestPrev = *kt;
-							found = true;
-						}
-					}
-					
-					/*
-					auto kt = instance[strand][chrId].Retreive(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, start_.GetChrId(), idx);
-					if (kt != 0)
-					{
-						successor[0] = it;
-						successor[1] = jt;
-						if (Compatible(*kt, successor, maxBranchSize))
-						{
-							const_cast<Instance&>(*kt).hasNext = true;
-							bestPrev = *kt;
-							found = true;
-						}
-					}
-					*/
-
-					if (!found)
-					{
-						purge_.back().instance->push_back(Instance(it, jt));
+						const_cast<Instance&>(*kt.first).hasNext = true;
+						Instance newUpdate(*kt.first, it, jt);
+						newUpdate.score = kt.second;
+						purge_.back().instance->push_back(newUpdate);
 						instance[strand][chrId].Add(&purge_.back().instance->back(), idx);
 					}
 					else
 					{
-						Instance newUpdate(bestPrev, it, jt);
-						purge_.back().instance->push_back(newUpdate);
+						purge_.back().instance->push_back(Instance(it, jt));
 						instance[strand][chrId].Add(&purge_.back().instance->back(), idx);
 					}
+				
 				}
 
 				NotifyPush(purge_.back());
