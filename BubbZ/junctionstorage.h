@@ -79,6 +79,18 @@ namespace Sibelia
 				idx_ += 1;
 			}
 
+			void DecInSequence()
+			{
+				if (IsPositiveStrand())
+				{
+					idx_ -= 1;
+				}
+				else
+				{
+					idx_ += 1;
+				}
+			}
+
 			void Next()
 			{
 				auto & pos = JunctionStorage::this_->position_[chrId_][idx_];

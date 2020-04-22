@@ -81,7 +81,6 @@ namespace Sibelia
 							instance[strand][chrId].Erase(&it, storage, lastPosEntry_, lastNegEntry_, maxBranchSize, start_.GetChrId(), it.idx);
 						}
 						
-
 						NotifyPop(purge_.front());
 						purge_.front().instance->clear();
 						pool_.push_back(purge_.front().instance);
@@ -117,6 +116,7 @@ namespace Sibelia
 			}
 
 			size_t maxSet = 0;
+			JunctionStorage::Iterator itPrev;
 			JunctionStorage::Iterator successor[2];
 			for (auto it = start_; it.Valid(); it.Inc())
 			{
@@ -131,7 +131,7 @@ namespace Sibelia
 					successor[0] = it;
 					successor[1] = jt;
 
-					auto kt = instance[strand][chrId].RetreiveBest(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, successor);
+					auto kt = instance[strand][chrId].RetreiveBest(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, successor, itPrev);
 					if (kt.first != 0)
 					{
 						const_cast<Instance&>(*kt.first).hasNext = true;
@@ -150,6 +150,7 @@ namespace Sibelia
 
 				NotifyPush(purge_.back());
 				Purge(storage, it.GetPosition(), k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance);
+				itPrev = it;
 			}
 
 			Purge(storage, INT32_MAX, k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance);
