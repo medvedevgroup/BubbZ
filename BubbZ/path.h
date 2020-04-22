@@ -18,14 +18,13 @@ namespace Sibelia
 	struct Instance
 	{
 		bool hasNext;
-		bool parallelEnd;
 		int32_t idx;
 		int32_t chrId;
 		int32_t score;
 		int32_t endIdx[2];
 		int32_t startIdx[2];
 
-		Instance() : hasNext(false), parallelEnd(false), score(1)
+		Instance() : hasNext(false),  score(1)
 		{
 
 		}
@@ -54,7 +53,6 @@ namespace Sibelia
 			startIdx[1] = inst.startIdx[1];
 			endIdx[0] = it.GetPosition();
 			endIdx[1] = jt.GetPosition();
-			parallelEnd = it.GetChar() == jt.GetChar();
 			
 			idx = jt.GetIndex();
 			chrId = jt.IsPositiveStrand() ? (jt.GetChrId() + 1) : -(jt.GetChrId() + 1);
@@ -64,7 +62,6 @@ namespace Sibelia
 		{
 			startIdx[0] = endIdx[0] = it.GetPosition();
 			startIdx[1] = endIdx[1] = jt.GetPosition();
-			parallelEnd = it.GetChar() == jt.GetChar();
 
 			idx = jt.GetIndex();
 			chrId = jt.IsPositiveStrand() ? (jt.GetChrId() + 1) : -(jt.GetChrId() + 1);
@@ -192,23 +189,15 @@ namespace Sibelia
 		{
 			int64_t edgeLength = 0;
 			bool withinBubble = true;
-			bool validSuccessor = inst.parallelEnd;
 			for (size_t i = 0; i < 2; i++)
 			{
-				edgeLength = abs(inst.endIdx[i] - succ[i].GetPosition());
-
-				if (inst.endIdx[i] != succ[i].PreviousPosition())
-				{
-					validSuccessor = false;
-				}
-
 				if (abs(inst.endIdx[i] - succ[i].GetPosition()) >= maxBranchSize)
 				{
 					withinBubble = false;
 				}
 			}
 
-			if (withinBubble || validSuccessor)
+			if (withinBubble)
 			{
 				if (succ[0].GetChrId() == succ[1].GetChrId())
 				{
@@ -216,18 +205,11 @@ namespace Sibelia
 					size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
 					if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
 					{
-						return false;
+						return 0;
 					}
 				}
 
-				if (withinBubble)
-				{
-					return 1;
-				}
-				else
-				{
-					return edgeLength;
-				}
+				return 1;
 			}
 
 			return 0;
