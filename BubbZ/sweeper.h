@@ -66,7 +66,7 @@ namespace Sibelia
 			{
 				if (purge_.front().instance->size() > 0)
 				{
-					int32_t diff = lastPos - (purge_.front().instance->front().endIdx[0]);
+					int32_t diff = lastPos - (purge_.front().instance->front().endPosition[0]);
 					if (diff >= maxBranchSize)
 					{
 						for (auto & it : *purge_.front().instance)
@@ -216,13 +216,13 @@ namespace Sibelia
 			int64_t currentBlock = ++blocksFound;
 			for (size_t l = 0; l < 2; l++)
 			{
-				if (inst.endIdx[l] >= 0)
+				if (inst.endPosition[l] >= 0)
 				{
-					blocksInstance.push_back(BlockInstance(+currentBlock, chrId[l], inst.startIdx[l], inst.endIdx[l] + k));
+					blocksInstance.push_back(BlockInstance(+currentBlock, chrId[l], inst.startPosition[l], inst.endPosition[l] + k));
 				}
 				else
 				{
-					blocksInstance.push_back(BlockInstance(-currentBlock, chrId[l], -(inst.endIdx[l]) - k, -inst.startIdx[l]));
+					blocksInstance.push_back(BlockInstance(-currentBlock, chrId[l], -(inst.endPosition[l]) - k, -inst.startPosition[l]));
 				}
 			}
 		}

@@ -21,8 +21,8 @@ namespace Sibelia
 		int32_t idx;
 		int32_t chrId;
 		int32_t score;
-		int32_t endIdx[2];
-		int32_t startIdx[2];
+		int32_t endPosition[2];
+		int32_t startPosition[2];
 
 		Instance() : hasNext(false),  score(1)
 		{
@@ -38,7 +38,7 @@ namespace Sibelia
 		{
 			for (size_t l = 0; l < 2; l++)
 			{
-				if (abs(endIdx[l] - startIdx[l]) < minBlockSize)
+				if (abs(endPosition[l] - startPosition[l]) < minBlockSize)
 				{
 					return false;
 				}
@@ -49,10 +49,10 @@ namespace Sibelia
 
 		Instance(const Instance & inst, JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt) : hasNext(false), score(inst.score + 1)
 		{
-			startIdx[0] = inst.startIdx[0];
-			startIdx[1] = inst.startIdx[1];
-			endIdx[0] = it.GetPosition();
-			endIdx[1] = jt.GetPosition();
+			startPosition[0] = inst.startPosition[0];
+			startPosition[1] = inst.startPosition[1];
+			endPosition[0] = it.GetPosition();
+			endPosition[1] = jt.GetPosition();
 			
 			idx = jt.GetIndex();
 			chrId = jt.IsPositiveStrand() ? (jt.GetChrId() + 1) : -(jt.GetChrId() + 1);
@@ -60,8 +60,8 @@ namespace Sibelia
 
 		Instance(JunctionStorage::Iterator & it, JunctionStorage::Iterator & jt) : hasNext(false)
 		{
-			startIdx[0] = endIdx[0] = it.GetPosition();
-			startIdx[1] = endIdx[1] = jt.GetPosition();
+			startPosition[0] = endPosition[0] = it.GetPosition();
+			startPosition[1] = endPosition[1] = jt.GetPosition();
 
 			idx = jt.GetIndex();
 			chrId = jt.IsPositiveStrand() ? (jt.GetChrId() + 1) : -(jt.GetChrId() + 1);
@@ -69,26 +69,14 @@ namespace Sibelia
 
 		bool IsPositiveStrand() const
 		{
-			return endIdx[1] > 0;
-		}
-
-		bool operator < (const Instance & cmp) const
-		{
-			auto id1 = abs(chrId);
-			auto id2 = abs(cmp.chrId);
-			if (id1 != id2)
-			{
-				return id1 < id2;
-			}
-
-			return idx < cmp.idx;
+			return endPosition[1] > 0;
 		}
 
 		bool operator == (const Instance & cmp) const
 		{
 			for (size_t i = 1; i < 2; i++)
 			{
-				if (startIdx[i] != cmp.startIdx[i] || endIdx[i] != cmp.endIdx[i])
+				if (startPosition[i] != cmp.startPosition[i] || endPosition[i] != cmp.endPosition[i])
 				{
 					return false;
 				}
@@ -190,7 +178,7 @@ namespace Sibelia
 			bool withinBubble = true;
 			for (size_t i = 0; i < 2; i++)
 			{
-				if (abs(inst.endIdx[i] - succ[i].GetPosition()) >= maxBranchSize)
+				if (abs(inst.endPosition[i] - succ[i].GetPosition()) >= maxBranchSize)
 				{
 					withinBubble = false;
 				}
@@ -200,9 +188,9 @@ namespace Sibelia
 			{
 				if (succ[0].GetChrId() == succ[1].GetChrId())
 				{
-					size_t startIdx2 = min(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-					size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-					if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
+					size_t startPosition2 = min(abs(inst.startPosition[1]), abs(inst.endPosition[1]));
+					size_t endPosition2 = max(abs(inst.startPosition[1]), abs(inst.endPosition[1]));
+					if ((startPosition2 >= inst.startPosition[0] && startPosition2 <= inst.endPosition[0]) || (inst.startPosition[0] >= startPosition2 && inst.startPosition[0] <= endPosition2))
 					{
 						return false;
 					}
@@ -222,15 +210,15 @@ namespace Sibelia
 		{
 			if (succ[0].GetChrId() == succ[1].GetChrId())
 			{
-				size_t startIdx2 = min(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-				size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-				if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
+				size_t startPosition2 = min(abs(inst.startPosition[1]), abs(inst.endPosition[1]));
+				size_t endPosition2 = max(abs(inst.startPosition[1]), abs(inst.endPosition[1]));
+				if ((startPosition2 >= inst.startPosition[0] && startPosition2 <= inst.endPosition[0]) || (inst.startPosition[0] >= startPosition2 && inst.startPosition[0] <= endPosition2))
 				{
 					return 0;
 				}
 			}
 
-			return abs(inst.endIdx[0] - succ[0].GetPosition());
+			return abs(inst.endPosition[0] - succ[0].GetPosition());
 		}
 
 		std::pair<Instance*, int64_t> TryRetreiveExact(const JunctionStorage & storage,
@@ -307,7 +295,7 @@ namespace Sibelia
 						auto inst = GetMagicIndex(storage, lastPosEntry, lastNegEntry, idx);
 						if (inst != 0)
 						{
-							if (succ[1].GetPosition() - inst->endIdx[1] >= maxBranchSize)
+							if (succ[1].GetPosition() - inst->endPosition[1] >= maxBranchSize)
 							{
 								go = false;
 								break;
@@ -350,7 +338,7 @@ namespace Sibelia
 						auto inst = GetMagicIndex(storage, lastPosEntry, lastNegEntry, idx);
 						if (inst != 0)
 						{
-							if (inst->endIdx[1] - succ[1].GetPosition() >= maxBranchSize)
+							if (inst->endPosition[1] - succ[1].GetPosition() >= maxBranchSize)
 							{
 								go = false;
 								break;
