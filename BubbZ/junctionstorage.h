@@ -118,7 +118,7 @@ namespace Sibelia
 
 			int32_t GetChrId() const
 			{
-				return chrId_;
+				return static_cast<int32_t>(chrId_);
 			}
 
 			int32_t PreviousPosition() const
@@ -214,7 +214,7 @@ namespace Sibelia
 			return position_[chr][idx].pointerIdx;
 		}
 
-		int64_t GetChrNumber() const
+		size_t GetChrNumber() const
 		{
 			return position_.size();
 		}

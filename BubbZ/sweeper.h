@@ -17,12 +17,12 @@ namespace Sibelia
 	{
 	public:
 		BlockInstance() {}
-		BlockInstance(int id, const size_t chr, size_t start, size_t end) : id_(id), chr_(chr), start_(start), end_(end) {}
+		BlockInstance(int64_t id, const size_t chr, size_t start, size_t end) : id_(id), chr_(chr), start_(start), end_(end) {}
 		void Reverse();
-		int GetSignedBlockId() const;
+		int64_t GetSignedBlockId() const;
 		bool GetDirection() const;
-		int GetBlockId() const;
-		int GetSign() const;
+		int64_t GetBlockId() const;
+		int64_t GetSign() const;
 		size_t GetChrId() const;
 		size_t GetStart() const;
 		size_t GetEnd() const;
@@ -34,7 +34,7 @@ namespace Sibelia
 		bool operator == (const BlockInstance & toCompare) const;
 		bool operator != (const BlockInstance & toCompare) const;
 	private:
-		int id_;
+		int64_t id_;
 		size_t start_;
 		size_t end_;
 		size_t chr_;
@@ -109,9 +109,9 @@ namespace Sibelia
 		}
 
 		void Sweep(JunctionStorage & storage,
-			int64_t minBlockSize,
-			int64_t maxBranchSize,
-			int64_t k,
+			int32_t minBlockSize,
+			int32_t maxBranchSize,
+			int32_t k,
 			std::atomic<int64_t> & blocksFound,
 			std::vector<BlockInstance> & blocksInstance,
 			std::vector<std::vector<InstanceSet> > & instance)
@@ -125,13 +125,18 @@ namespace Sibelia
 
 			JunctionStorage::Iterator itPrev;
 			JunctionStorage::Iterator successor[2];
+			std::stringstream ss;
+			ss << "log/" << omp_get_thread_num();
+			std::ofstream log(ss.str().c_str());
 			for (auto it = start_; it.Valid(); it.Inc())
 			{
+				log << "Pi " << it.GetPosition() << std::endl;
 				auto jt = it;
 				purge_.push_back(VertexEntry(it.GetVertexId(), it.GetPointerIndex(), pool_.back()));
 				pool_.pop_back();
 				for (jt.Next(); jt.Valid(); jt.Next())
 				{
+					log << "Pj " << jt.GetPosition() << std::endl;
 					size_t idx = jt.GetIndex();
 					int32_t chrId = jt.GetChrId();
 					size_t strand = jt.IsPositiveStrand() ? 0 : 1;
@@ -139,9 +144,11 @@ namespace Sibelia
 					successor[1] = jt;
 
 					auto kt = instance[strand][chrId].TryRetreiveExact(storage, lastPosEntry_, lastNegEntry_, successor, itPrev);
+					log << "RE" << std::endl;
 					if (kt.first == 0)
 					{
 						kt = instance[strand][chrId].RetreiveBest(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, successor);
+						log << "RI" << std::endl;
 					}
 				
 					if (kt.first != 0)
@@ -151,17 +158,20 @@ namespace Sibelia
 						newUpdate.score = kt.second;
 						purge_.back().instance->push_back(newUpdate);
 						instance[strand][chrId].Add(&purge_.back().instance->back(), idx);
+						log << "AN" << std::endl;
 					}
 					else
 					{
 						purge_.back().instance->push_back(Instance(it, jt));
 						instance[strand][chrId].Add(&purge_.back().instance->back(), idx);
+						log << "EX" << std::endl;
 					}
 				
 				}
 
 				NotifyPush(purge_.back());
 				Purge(storage, it.GetPosition(), k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance, 0);
+				log << "PR" << std::endl;
 				itPrev = it;
 			}
 

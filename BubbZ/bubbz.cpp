@@ -127,9 +127,6 @@ int main(int argc, char * argv[])
 		Sibelia::BlocksFinder finder(storage, kvalue.getValue());
 		finder.FindBlocks(minBlockSize.getValue(),
 			maxBranchSize.getValue(),
-			maxBranchSize.getValue(),
-			8,
-			0,
 			threads.getValue(),
 			outDirName.getValue() + "/paths.txt");
 		std::cout << std::time(0) - tick << std::endl;

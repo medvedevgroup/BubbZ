@@ -20,7 +20,7 @@ namespace Sibelia
 		bool hasNext;
 		int32_t idx;
 		int32_t chrId;
-		int32_t score;
+		uint32_t score;
 		int32_t endPosition[2];
 		int32_t startPosition[2];
 
@@ -54,7 +54,7 @@ namespace Sibelia
 			endPosition[0] = it.GetPosition();
 			endPosition[1] = jt.GetPosition();
 			
-			idx = jt.GetIndex();
+			idx = static_cast<int32_t>(jt.GetIndex());
 			chrId = jt.IsPositiveStrand() ? (jt.GetChrId() + 1) : -(jt.GetChrId() + 1);
 		}
 
@@ -63,7 +63,7 @@ namespace Sibelia
 			startPosition[0] = endPosition[0] = it.GetPosition();
 			startPosition[1] = endPosition[1] = jt.GetPosition();
 
-			idx = jt.GetIndex();
+			idx = static_cast<int32_t>(jt.GetIndex());
 			chrId = jt.IsPositiveStrand() ? (jt.GetChrId() + 1) : -(jt.GetChrId() + 1);
 		}
 
@@ -173,7 +173,7 @@ namespace Sibelia
 			return 0;
 		}
 
-		int64_t Compatible(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
+		uint32_t Compatible(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{
 			bool withinBubble = true;
 			for (size_t i = 0; i < 2; i++)
@@ -206,7 +206,7 @@ namespace Sibelia
 		}
 
 
-		int64_t CompatibleExact(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
+		uint32_t CompatibleExact(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{
 			if (succ[0].GetChrId() == succ[1].GetChrId())
 			{
@@ -221,18 +221,15 @@ namespace Sibelia
 			return abs(inst.endPosition[0] - succ[0].GetPosition());
 		}
 
-		std::pair<Instance*, int64_t> TryRetreiveExact(const JunctionStorage & storage,
+		std::pair<Instance*, uint32_t> TryRetreiveExact(const JunctionStorage & storage,
 			std::vector<VertexEntry* >& lastPosEntry,
 			std::vector<VertexEntry* >&lastNegEntry,
 			const JunctionStorage::Iterator succ[2],
 			JunctionStorage::Iterator chr0Prev)
 		{
 
-			uint64_t bit;
-			uint64_t element;
 			Instance* ret = 0;
 			int64_t bestScore = 0;
-			bool fast = false;
 			if (chr0Prev.Valid())
 			{
 				auto chr1Prev = succ[1];
@@ -251,12 +248,10 @@ namespace Sibelia
 				}
 			}
 
-			return std::pair<Instance*, int64_t>(0, 0);
+			return std::pair<Instance*, uint32_t>(0, 0);
 		}
 
-
-
-		std::pair<Instance*, int64_t> RetreiveBest(const JunctionStorage & storage,
+		std::pair<Instance*, uint32_t> RetreiveBest(const JunctionStorage & storage,
 			std::vector<VertexEntry* >& lastPosEntry,
 			std::vector<VertexEntry* >&lastNegEntry,
 			int32_t maxBranchSize,
@@ -266,7 +261,7 @@ namespace Sibelia
 			uint64_t bit;
 			uint64_t element;
 			Instance* ret = 0;
-			int64_t bestScore = 0;
+			uint32_t bestScore = 0;
 			GetCoord(succ[1].GetIndex(), element, bit);
 			int32_t maxBranchSizeElement = (maxBranchSize >> 6) + 1;
 			if (isPositiveStrand_)
@@ -351,7 +346,6 @@ namespace Sibelia
 								bestScore = inst->score + gapScore;
 							}							
 						}
-
 					}
 				}
 			}
@@ -364,7 +358,6 @@ namespace Sibelia
 			auto * currentInst = Retreive(storage, lastPosEntry, lastNegEntry, maxBranchSize, chr0, chr1idx);
 			if (currentInst == inst)
 			{
-				//instance_[idx] = 0;
 				uint64_t bit;
 				uint64_t element;
 				GetCoord(chr1idx, element, bit);
@@ -376,7 +369,6 @@ namespace Sibelia
 		size_t chr1_;
 		bool isPositiveStrand_;
 		std::vector<uint64_t> isActive_;
-		//std::vector<Instance*> instance_;
 		
 
 		Instance* GetMagicIndex(const JunctionStorage & storage, std::vector<VertexEntry* > & lastPosEntry, std::vector<VertexEntry* > & lastNegEntry, size_t chr1Idx) const

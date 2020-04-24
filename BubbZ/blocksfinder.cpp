@@ -45,7 +45,7 @@ namespace Sibelia
 	JunctionStorage * JunctionStorage::this_;
 	extern const std::string VERSION = "1.0.0";
 
-	int BlockInstance::GetSignedBlockId() const
+	int64_t BlockInstance::GetSignedBlockId() const
 	{
 		return id_;
 	}
@@ -55,12 +55,12 @@ namespace Sibelia
 		return id_ > 0;
 	}
 
-	int BlockInstance::GetSign() const
+	int64_t BlockInstance::GetSign() const
 	{
 		return GetSignedBlockId() > 0 ? +1 : -1;
 	}
 
-	int BlockInstance::GetBlockId() const
+	int64_t BlockInstance::GetBlockId() const
 	{
 		return abs(id_);
 	}

@@ -156,7 +156,6 @@ namespace Sibelia
 		BlocksFinder(JunctionStorage & storage, size_t k) : storage_(storage), k_(k)
 		{
 			progressCount_ = 50;
-			scoreFullChains_ = true;
 		}
 
 		void Split(std::string & source, std::vector<std::string> & result)
@@ -170,12 +169,11 @@ namespace Sibelia
 			}
 		}
 
-		void FindBlocks(int64_t minBlockSize, int64_t maxBranchSize, int64_t maxFlankingSize, int64_t lookingDepth, int64_t sampleSize, int64_t threads, const std::string & debugOut)
+		void FindBlocks(int32_t minBlockSize, int32_t maxBranchSize, int32_t threads, const std::string & debugOut)
 		{
 			blocksFound_ = 0;
 			minBlockSize_ = minBlockSize;
 			maxBranchSize_ = maxBranchSize;
-			maxFlankingSize_ = maxFlankingSize;
 
 			using namespace std::placeholders;
 
@@ -313,11 +311,8 @@ namespace Sibelia
 		std::atomic<size_t> currentIndex_;
 		std::atomic<int64_t> blocksFound_;
 
-		bool scoreFullChains_;
-		int64_t scalingFactor_;
-		int64_t minBlockSize_;
-		int64_t maxBranchSize_;
-		int64_t maxFlankingSize_;
+		int32_t minBlockSize_;
+		int32_t maxBranchSize_;
 		JunctionStorage & storage_;
 		std::ofstream debugOut_;
 		std::vector<BlockInstance> blocksInstance_;
