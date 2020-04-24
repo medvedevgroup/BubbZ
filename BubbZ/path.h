@@ -187,18 +187,36 @@ namespace Sibelia
 
 		int64_t Compatible(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{
-			if (succ[0].GetChrId() == succ[1].GetChrId())
+			bool withinBubble = true;
+			for (size_t i = 0; i < 2; i++)
 			{
-				size_t startIdx2 = min(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-				size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-				if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
+				if (abs(inst.endIdx[i] - succ[i].GetPosition()) >= maxBranchSize)
 				{
-					return 0;
+					withinBubble = false;
 				}
 			}
 
-			return 1;
+			if (withinBubble)
+			{
+				if (succ[0].GetChrId() == succ[1].GetChrId())
+				{
+					size_t startIdx2 = min(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
+					size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
+					if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
+					{
+						return false;
+					}
+				}
+
+				if (withinBubble)
+				{
+					return 1;
+				}
+			}
+
+			return 0;
 		}
+
 
 		int64_t CompatibleExact(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{

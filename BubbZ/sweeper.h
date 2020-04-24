@@ -141,7 +141,6 @@ namespace Sibelia
 					auto kt = instance[strand][chrId].TryRetreiveExact(storage, lastPosEntry_, lastNegEntry_, successor, itPrev);
 					if (kt.first == 0)
 					{
-						Purge(storage, it.GetPosition(), k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance, it.GetVertexId());
 						kt = instance[strand][chrId].RetreiveBest(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, successor);
 					}
 				
