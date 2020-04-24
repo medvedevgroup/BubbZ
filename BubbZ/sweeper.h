@@ -54,12 +54,13 @@ namespace Sibelia
 
 		void Purge(JunctionStorage & storage,
 			int32_t lastPos,
-			int64_t k,
+			int32_t k,
 			std::atomic<int64_t> & blocksFound,
 			std::vector<BlockInstance> & blocksInstance,
 			int32_t minBlockSize,
 			int32_t maxBranchSize,
-			std::vector<std::vector<InstanceSet> > & instance)
+			std::vector<std::vector<InstanceSet> > & instance,
+			int64_t currentVid)
 		{
 			while (purge_.size() > 0)
 			{
@@ -91,11 +92,18 @@ namespace Sibelia
 						break;
 					}
 				}
-				else
+				else 
 				{
-					NotifyPop(purge_.front());
-					pool_.push_back(purge_.front().instance);
-					purge_.pop_front();
+					if (purge_.front().vertexId != currentVid)
+					{
+						NotifyPop(purge_.front());
+						pool_.push_back(purge_.front().instance);
+						purge_.pop_front();
+					}
+					else
+					{
+						break;
+					}
 				}								
 			}
 		}
@@ -115,7 +123,6 @@ namespace Sibelia
 				pool_.back()->reserve(storage.GetAbundance());
 			}
 
-			size_t maxSet = 0;
 			JunctionStorage::Iterator itPrev;
 			JunctionStorage::Iterator successor[2];
 			for (auto it = start_; it.Valid(); it.Inc())
@@ -131,7 +138,13 @@ namespace Sibelia
 					successor[0] = it;
 					successor[1] = jt;
 
-					auto kt = instance[strand][chrId].RetreiveBest(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, successor, itPrev);
+					auto kt = instance[strand][chrId].TryRetreiveExact(storage, lastPosEntry_, lastNegEntry_, successor, itPrev);
+					if (kt.first == 0)
+					{
+						Purge(storage, it.GetPosition(), k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance, it.GetVertexId());
+						kt = instance[strand][chrId].RetreiveBest(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, successor);
+					}
+				
 					if (kt.first != 0)
 					{
 						const_cast<Instance&>(*kt.first).hasNext = true;
@@ -149,11 +162,11 @@ namespace Sibelia
 				}
 
 				NotifyPush(purge_.back());
-				Purge(storage, it.GetPosition(), k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance);
+				Purge(storage, it.GetPosition(), k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance, 0);
 				itPrev = it;
 			}
 
-			Purge(storage, INT32_MAX, k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance);
+			Purge(storage, INT32_MAX, k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance, 0);
 			for (auto pt : pool_)
 			{
 				delete pt;

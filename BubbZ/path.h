@@ -187,32 +187,17 @@ namespace Sibelia
 
 		int64_t Compatible(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
 		{
-			int64_t edgeLength = 0;
-			bool withinBubble = true;
-			for (size_t i = 0; i < 2; i++)
+			if (succ[0].GetChrId() == succ[1].GetChrId())
 			{
-				if (abs(inst.endIdx[i] - succ[i].GetPosition()) >= maxBranchSize)
+				size_t startIdx2 = min(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
+				size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
+				if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
 				{
-					withinBubble = false;
+					return 0;
 				}
 			}
 
-			if (withinBubble)
-			{
-				if (succ[0].GetChrId() == succ[1].GetChrId())
-				{
-					size_t startIdx2 = min(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-					size_t endIdx2 = max(abs(inst.startIdx[1]), abs(inst.endIdx[1]));
-					if ((startIdx2 >= inst.startIdx[0] && startIdx2 <= inst.endIdx[0]) || (inst.startIdx[0] >= startIdx2 && inst.startIdx[0] <= endIdx2))
-					{
-						return 0;
-					}
-				}
-
-				return 1;
-			}
-
-			return 0;
+			return 1;
 		}
 
 		int64_t CompatibleExact(const Instance & inst, const JunctionStorage::Iterator succ[2], int64_t maxBranchSize) const
@@ -230,15 +215,13 @@ namespace Sibelia
 			return abs(inst.endIdx[0] - succ[0].GetPosition());
 		}
 
-
-		std::pair<Instance*, int64_t> RetreiveBest(const JunctionStorage & storage,
+		std::pair<Instance*, int64_t> TryRetreiveExact(const JunctionStorage & storage,
 			std::vector<VertexEntry* >& lastPosEntry,
 			std::vector<VertexEntry* >&lastNegEntry,
-			int32_t maxBranchSize,
 			const JunctionStorage::Iterator succ[2],
 			JunctionStorage::Iterator chr0Prev)
 		{
-			
+
 			uint64_t bit;
 			uint64_t element;
 			Instance* ret = 0;
@@ -253,12 +236,31 @@ namespace Sibelia
 					auto inst = GetMagicIndex(storage, lastPosEntry, lastNegEntry, chr1Prev.GetIndex());
 					if (inst != 0)
 					{
-						auto gapScore = CompatibleExact(*inst, succ, maxBranchSize);
-						return std::make_pair(inst, inst->score + gapScore);
+						auto gapScore = CompatibleExact(*inst, succ, 0);
+						if (gapScore > 0)
+						{
+							return std::make_pair(inst, inst->score + gapScore);
+						}
 					}
 				}
 			}
 
+			return std::pair<Instance*, int64_t>(0, 0);
+		}
+
+
+
+		std::pair<Instance*, int64_t> RetreiveBest(const JunctionStorage & storage,
+			std::vector<VertexEntry* >& lastPosEntry,
+			std::vector<VertexEntry* >&lastNegEntry,
+			int32_t maxBranchSize,
+			const JunctionStorage::Iterator succ[2])
+		{
+			
+			uint64_t bit;
+			uint64_t element;
+			Instance* ret = 0;
+			int64_t bestScore = 0;
 			GetCoord(succ[1].GetIndex(), element, bit);
 			int32_t maxBranchSizeElement = (maxBranchSize >> 6) + 1;
 			if (isPositiveStrand_)
@@ -287,17 +289,17 @@ namespace Sibelia
 						auto inst = GetMagicIndex(storage, lastPosEntry, lastNegEntry, idx);
 						if (inst != 0)
 						{
+							if (succ[1].GetPosition() - inst->endIdx[1] >= maxBranchSize)
+							{
+								go = false;
+								break;
+							}
+
 							auto gapScore = Compatible(*inst, succ, maxBranchSize);
 							if (gapScore > 0 && (ret == 0 || (inst->score + gapScore > bestScore)))
 							{
 								ret = inst;
 								bestScore = inst->score + gapScore;
-							}
-
-							if (succ[1].GetPosition() - inst->endIdx[1] >= maxBranchSize)
-							{
-								go = false;
-								break;
 							}
 						}
 					}
@@ -330,18 +332,18 @@ namespace Sibelia
 						auto inst = GetMagicIndex(storage, lastPosEntry, lastNegEntry, idx);
 						if (inst != 0)
 						{
+							if (inst->endIdx[1] - succ[1].GetPosition() >= maxBranchSize)
+							{
+								go = false;
+								break;
+							}
+
 							auto gapScore = Compatible(*inst, succ, maxBranchSize);
 							if (gapScore > 0 && (ret == 0 || (inst->score + gapScore > bestScore)))
 							{
 								ret = inst;
 								bestScore = inst->score + gapScore;
-							}
-
-							if (inst->endIdx[1] - succ[1].GetPosition() >= maxBranchSize)
-							{
-								go = false;
-								break;						
-							}
+							}							
 						}
 
 					}
