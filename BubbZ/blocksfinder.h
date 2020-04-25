@@ -179,9 +179,16 @@ namespace Sibelia
 
 			count_ = 0;
 			time_t start = clock();
-			progressCount_ = 0;
 			currentIndex_ = 0;
 			workInstance_.resize(threads);
+
+			std::cout << '[' << std::flush;
+			progressPortion_ = storage_.GetChrNumber() / progressCount_;
+			if (progressPortion_ == 0)
+			{
+				progressPortion_ = 1;
+			}
+
 			#pragma omp parallel num_threads(threads)
 			{
 				ChrSweep process(*this);
@@ -194,7 +201,9 @@ namespace Sibelia
 				outVector.clear();
 			}
 
-			std::cout << double(clock() - start) / CLOCKS_PER_SEC << std::endl;
+			std::cout << ']' << std::endl;
+
+			//std::cout << double(clock() - start) / CLOCKS_PER_SEC << std::endl;
 		}
 
 		struct ChrSweep
@@ -242,7 +251,10 @@ namespace Sibelia
 						Sweeper sweeper(it, lastPosEntry_, lastNegEntry_);
 						sweeper.Sweep(finder.storage_, finder.minBlockSize_, finder.maxBranchSize_, finder.k_, finder.blocksFound_, finder.workInstance_[omp_get_thread_num()], instance);
 						{
-							std::cout << ++finder.progressCount_ << ' ' << finder.storage_.GetChrNumber() << std::endl;
+							if (finder.count_++ % finder.progressPortion_ == 0)
+							{
+								std::cout << '.' << std::flush;
+							}
 						}
 					}
 					

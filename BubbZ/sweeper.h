@@ -126,17 +126,14 @@ namespace Sibelia
 			JunctionStorage::Iterator itPrev;
 			JunctionStorage::Iterator successor[2];
 			std::stringstream ss;
-			ss << "log/" << omp_get_thread_num();
 			std::ofstream log(ss.str().c_str());
 			for (auto it = start_; it.Valid(); it.Inc())
 			{
-				log << "Pi " << it.GetPosition() << std::endl;
 				auto jt = it;
 				purge_.push_back(VertexEntry(it.GetVertexId(), it.GetPointerIndex(), pool_.back()));
 				pool_.pop_back();
 				for (jt.Next(); jt.Valid(); jt.Next())
 				{
-					log << "Pj " << jt.GetPosition() << std::endl;
 					size_t idx = jt.GetIndex();
 					int32_t chrId = jt.GetChrId();
 					size_t strand = jt.IsPositiveStrand() ? 0 : 1;
@@ -144,7 +141,6 @@ namespace Sibelia
 					successor[1] = jt;
 
 					auto kt = instance[strand][chrId].TryRetreiveExact(storage, lastPosEntry_, lastNegEntry_, successor, itPrev);
-					log << "RE" << std::endl;
 					if (kt.first == 0)
 					{
 						kt = instance[strand][chrId].RetreiveBest(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, successor);
@@ -158,20 +154,16 @@ namespace Sibelia
 						newUpdate.score = kt.second;
 						purge_.back().instance->push_back(newUpdate);
 						instance[strand][chrId].Add(&purge_.back().instance->back(), idx);
-						log << "AN" << std::endl;
 					}
 					else
 					{
 						purge_.back().instance->push_back(Instance(it, jt));
 						instance[strand][chrId].Add(&purge_.back().instance->back(), idx);
-						log << "EX" << std::endl;
 					}
-				
 				}
 
 				NotifyPush(purge_.back());
 				Purge(storage, it.GetPosition(), k, blocksFound, blocksInstance, minBlockSize, maxBranchSize, instance, 0);
-				log << "PR" << std::endl;
 				itPrev = it;
 			}
 
