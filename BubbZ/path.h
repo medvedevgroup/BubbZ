@@ -386,8 +386,13 @@ namespace Sibelia
 			}
 
 			auto chr1PointerIdx = storage.GetPointerIndex(chr1_, chr1Idx);
-			auto & val = (*e->instance)[chr1PointerIdx - e->pointerIdx - 1];
-			return &val;
+			auto magicIdx = chr1PointerIdx - e->pointerIdx - 1;
+			if (magicIdx >= 0 && magicIdx < (*e->instance).size())
+			{
+				return &(*e->instance)[magicIdx];
+			}
+
+			return 0;
 		}
 
 		Instance* GetInstanceBefore(const JunctionStorage & storage, std::vector<VertexEntry* >& lastPosEntry, std::vector<VertexEntry* > &lastNegEntry, size_t chr0, uint64_t element, uint64_t mask)

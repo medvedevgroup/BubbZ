@@ -125,8 +125,6 @@ namespace Sibelia
 
 			JunctionStorage::Iterator itPrev;
 			JunctionStorage::Iterator successor[2];
-			std::stringstream ss;
-			std::ofstream log(ss.str().c_str());
 			for (auto it = start_; it.Valid(); it.Inc())
 			{
 				auto jt = it;
@@ -144,7 +142,6 @@ namespace Sibelia
 					if (kt.first == 0)
 					{
 						kt = instance[strand][chrId].RetreiveBest(storage, lastPosEntry_, lastNegEntry_, maxBranchSize, successor);
-						log << "RI" << std::endl;
 					}
 				
 					if (kt.first != 0)
