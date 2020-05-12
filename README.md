@@ -1,7 +1,7 @@
-BubbZ 1.0.0
+BubbZ 1.1.0
 ===============
 
-Release date: 21th January 2019
+Release date: 12th April 2020
 =================
 
 Authors
@@ -189,4 +189,5 @@ E-mail your feedback at ivminkin@gmail.com.
 
 Datasets used of analyses in the paper
 ======================================
-See: https://github.com/medvedevgroup/SibeliaZ/blob/master/DATA.txt
+Mice and simulated genomes: https://github.com/medvedevgroup/SibeliaZ/blob/master/DATA.txt
+Salmonella RefSeq genomes accession numbers: https://github.com/medvedevgroup/SibeliaZ/blob/master/DATA.txt
