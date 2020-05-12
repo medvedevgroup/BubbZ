@@ -190,4 +190,5 @@ E-mail your feedback at ivminkin@gmail.com.
 Datasets used of analyses in the paper
 ======================================
 Mice and simulated genomes: https://github.com/medvedevgroup/SibeliaZ/blob/master/DATA.txt
-Salmonella RefSeq genomes accession numbers: https://github.com/medvedevgroup/SibeliaZ/blob/master/DATA.txt
+
+Salmonella RefSeq genomes accession numbers: https://github.com/medvedevgroup/BubbZ/blob/master/salmonella_refseq.txt
