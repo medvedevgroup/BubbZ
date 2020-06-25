@@ -177,7 +177,7 @@ If you use SibeliaZ in your research, please cite:
 
 	Scalable pairwise whole-genome homology mapping of large genomes with BubbZ
 	Ilia Minkin, Paul Medvedev
-	iScience, in production
+	iScience, 2020: https://doi.org/10.1016/j.isci.2020.101224
 
 License
 =======
