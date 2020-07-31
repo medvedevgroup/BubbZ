@@ -70,7 +70,7 @@ min() {
    [ "$1" -lt "$2" ] && echo $1 || echo $2
 }
 
-infile=$1
+infile="$@"
 twopaco_threads=$( min $threads 16 )
 dbg_file=$outdir/de_bruijn_graph.dbg
 
