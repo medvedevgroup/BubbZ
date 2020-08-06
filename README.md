@@ -1,7 +1,7 @@
 BubbZ 1.1.1
 ===============
 
-Release date: *
+Release date: 8th August 2020
 =================
 
 Authors
