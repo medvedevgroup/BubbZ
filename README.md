@@ -1,7 +1,7 @@
-BubbZ 1.1.0
+BubbZ 1.1.1
 ===============
 
-Release date: 12th April 2020
+Release date: 8th August 2020
 =================
 
 Authors
@@ -175,9 +175,9 @@ Citation
 ========
 If you use SibeliaZ in your research, please cite:
 
-	Scalable pairwise whole-genome homology mapping of largegenomes with BubbZ
+	Scalable pairwise whole-genome homology mapping of large genomes with BubbZ
 	Ilia Minkin, Paul Medvedev
-	Under review
+	iScience, 2020: https://doi.org/10.1016/j.isci.2020.101224
 
 License
 =======
@@ -190,4 +190,5 @@ E-mail your feedback at ivminkin@gmail.com.
 Datasets used of analyses in the paper
 ======================================
 Mice and simulated genomes: https://github.com/medvedevgroup/SibeliaZ/blob/master/DATA.txt
-Salmonella RefSeq genomes accession numbers: https://github.com/medvedevgroup/SibeliaZ/blob/master/DATA.txt
+
+Salmonella RefSeq genomes accession numbers: https://github.com/medvedevgroup/BubbZ/blob/master/salmonella_refseq.txt
